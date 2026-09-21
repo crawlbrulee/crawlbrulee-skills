@@ -5,9 +5,7 @@ license: Apache-2.0
 metadata:
   author: crawlbrulee
   homepage: https://crawlbrulee.com
-allowed-tools:
-  - Bash(crawlbrulee *)
-  - Bash(npx crawlbrulee *)
+allowed-tools: Bash(crawlbrulee:*) Bash(npx crawlbrulee:*)
 ---
 
 # 🍮 crawlbrulee cli
