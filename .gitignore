@@ -1,0 +1,8 @@
+# editor + os
+.idea/
+.DS_Store
+
+# maintainer-only agent wiring. kept out of the repo so the skills installer
+# only ever finds the public skills under skills/
+.agents/
+.claude/

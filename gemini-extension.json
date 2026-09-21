@@ -1,0 +1,19 @@
+{
+  "name": "crawlbrulee",
+  "version": "1.0.0",
+  "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+  "settings": [
+    {
+      "name": "crawlbrulee api key",
+      "description": "your crawlbrulee api key, used by the bundled mcp server. get a free one at https://dashboard.crawlbrulee.com",
+      "envVar": "CRAWLBRULEE_API_KEY",
+      "sensitive": true
+    }
+  ],
+  "mcpServers": {
+    "crawlbrulee": {
+      "command": "npx",
+      "args": ["-y", "@crawlbrulee/mcp"]
+    }
+  }
+}

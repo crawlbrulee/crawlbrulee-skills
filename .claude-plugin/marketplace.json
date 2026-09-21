@@ -1,0 +1,35 @@
+{
+  "name": "crawlbrulee",
+  "owner": {
+    "name": "crawlbrulee",
+    "url": "https://crawlbrulee.com"
+  },
+  "description": "official agent skills and mcp wiring for the crawlbrulee web-scraping api.",
+  "plugins": [
+    {
+      "name": "crawlbrulee",
+      "displayName": "crawlbrulee",
+      "source": "./",
+      "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+      "version": "1.0.0",
+      "author": {
+        "name": "crawlbrulee",
+        "url": "https://crawlbrulee.com"
+      },
+      "homepage": "https://crawlbrulee.com/docs",
+      "repository": "https://github.com/crawlbrulee/crawlbrulee-skills",
+      "license": "Apache-2.0",
+      "category": "development",
+      "keywords": [
+        "web-scraping",
+        "scraping",
+        "markdown",
+        "screenshots",
+        "site-map",
+        "html",
+        "web-data",
+        "api"
+      ]
+    }
+  ]
+}

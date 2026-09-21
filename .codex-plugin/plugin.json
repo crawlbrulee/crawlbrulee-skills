@@ -1,0 +1,44 @@
+{
+  "name": "crawlbrulee",
+  "version": "1.0.0",
+  "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+  "author": {
+    "name": "crawlbrulee",
+    "url": "https://crawlbrulee.com"
+  },
+  "homepage": "https://crawlbrulee.com/docs",
+  "repository": "https://github.com/crawlbrulee/crawlbrulee-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "web-scraping",
+    "scraping",
+    "markdown",
+    "screenshots",
+    "site-map",
+    "html",
+    "web-data",
+    "api"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "crawlbrulee",
+    "shortDescription": "turn any url into markdown, html, links, images, screenshots, and site maps",
+    "longDescription": "crawlbrulee is a web-scraping api. you send a url and get back clean structured data: markdown, cleaned html, raw html, the page's links and images, a screenshot, and page metadata. you can also list the urls on a site before you scrape them. this plugin carries ten skills — one entry point, the shared api contract, one per capability (scrape, async scrape, map, screenshots), and one per interface (cli, mcp, js/ts sdk, python sdk) — so the agent knows which call to make and how to read the result.",
+    "developerName": "crawlbrulee",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://crawlbrulee.com",
+    "defaultPrompt": [
+      "scrape https://example.com with crawlbrulee and give me the markdown",
+      "use crawlbrulee to list the urls on example.com, then scrape the docs pages",
+      "take a full-page screenshot of https://example.com with crawlbrulee",
+      "check my crawlbrulee credit usage"
+    ],
+    "brandColor": "#FACC14",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png",
+    "screenshots": []
+  }
+}

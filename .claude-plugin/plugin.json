@@ -1,0 +1,33 @@
+{
+  "name": "crawlbrulee",
+  "displayName": "crawlbrulee",
+  "version": "1.0.0",
+  "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+  "author": {
+    "name": "crawlbrulee",
+    "url": "https://crawlbrulee.com"
+  },
+  "homepage": "https://crawlbrulee.com/docs",
+  "repository": "https://github.com/crawlbrulee/crawlbrulee-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "web-scraping",
+    "scraping",
+    "markdown",
+    "screenshots",
+    "site-map",
+    "html",
+    "web-data",
+    "api"
+  ],
+  "mcpServers": "./.mcp.json",
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "crawlbrulee api key",
+      "description": "your crawlbrulee api key, used by the bundled mcp server. get a free one at https://dashboard.crawlbrulee.com",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

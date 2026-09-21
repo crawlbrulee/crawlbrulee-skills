@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "crawlbrulee": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@crawlbrulee/mcp"],
+      "env": {
+        "CRAWLBRULEE_API_KEY": "${user_config.api_key}"
+      }
+    }
+  }
+}
