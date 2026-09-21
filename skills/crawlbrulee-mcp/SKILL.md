@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-mcp
 description: use when an mcp-aware agent or editor should scrape pages, map sites, run background scrape jobs, or check crawlbrulee credits as native tool calls. covers installing the `@crawlbrulee/mcp` stdio server and its seven tools.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee mcp server

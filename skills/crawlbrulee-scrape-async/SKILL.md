@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-scrape-async
 description: use when a crawlbrulee scrape shouldn't hold the connection open — submitting a background job, polling its status, fetching the result later, or being notified by a signed scrape.complete webhook instead of polling. covers the job lifecycle, webhook payloads, signature verification, and secret rotation.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee async scrape & webhooks

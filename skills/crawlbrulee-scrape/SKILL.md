@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-scrape
 description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata. covers every extract format and which are on by default, js rendering, excluding page furniture, cache and proxy options, and the full response shape including warnings and unsupported fields.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee scrape

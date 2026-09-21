@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-api
 description: use when you need crawlbrulee's shared api contract — the base url, bearer auth, the full endpoint list, the response_meta usage object, caching, proxy tiers, location targeting, and the error model. read this whichever interface you call from. also covers calling the http api directly with curl or a generated client.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 allowed-tools:
   - Bash(curl *)
 ---

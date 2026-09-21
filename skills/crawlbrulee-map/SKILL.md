@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-map
 description: use when discovering which urls exist on a site with crawlbrulee before scraping them — sitemap plus homepage link discovery, filtering to internal, external, or subdomain links, pagination through large result sets, and reading truncation info. this is how you plan a crawl, since there is no crawl endpoint.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee map

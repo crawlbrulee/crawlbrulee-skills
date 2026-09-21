@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-cli
 description: use when driving crawlbrulee from a terminal or a shell script — the `crawlbrulee` / `npx crawlbrulee` command. covers scrape url, scrape status/result/wait, map, usage, whoami, login/logout/view-config, every flag, the screenshot shorthand, and text-vs-json output.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 allowed-tools:
   - Bash(crawlbrulee *)
   - Bash(npx crawlbrulee *)

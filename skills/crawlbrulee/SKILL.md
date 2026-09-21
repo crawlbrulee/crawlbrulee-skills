@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee
 description: use when you need web data from a url with crawlbrulee — scraping a page into markdown or html, pulling its links or images, screenshotting it, or discovering which urls exist on a site. start here to learn what crawlbrulee does, set up the api key, and pick an interface (cli, mcp, js/ts sdk, python sdk, or raw http).
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee

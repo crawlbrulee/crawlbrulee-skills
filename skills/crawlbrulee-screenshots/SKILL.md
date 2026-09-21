@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-screenshots
 description: use when capturing a screenshot of a web page with crawlbrulee — viewport vs full-page, desktop vs mobile, custom viewport size and scale factor, ad and popup cleanup, scrolling or waiting before capture, slicing tall pages into tiles, and where the image url lands in the response.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee screenshots

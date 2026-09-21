@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-sdk-python
 description: use when calling crawlbrulee from Python code, sync or async — the `crawlbrulee` PyPI package. covers the Crawlbrulee and AsyncCrawlbrulee clients, every method, background jobs with wait_for_scrape, webhook signature verification, and the typed error classes.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee python sdk

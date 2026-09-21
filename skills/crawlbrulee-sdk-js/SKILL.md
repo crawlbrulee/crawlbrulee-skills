@@ -1,6 +1,10 @@
 ---
 name: crawlbrulee-sdk-js
 description: use when calling crawlbrulee from Node.js, TypeScript, Deno, or Bun code — the `@crawlbrulee/sdk` package. covers constructing the Crawlbrulee client, every method, background jobs with waitForScrape, webhook signature verification, the typed error classes, and cancellation with AbortSignal.
+license: Apache-2.0
+metadata:
+  author: crawlbrulee
+  homepage: https://crawlbrulee.com
 ---
 
 # 🍮 crawlbrulee js/ts sdk
