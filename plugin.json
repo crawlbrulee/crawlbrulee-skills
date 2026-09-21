@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "crawlbrulee",
   "version": "1.0.0",
-  "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+  "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, processed fully in the EU.",
   "author": {
     "name": "crawlbrulee",
     "url": "https://crawlbrulee.com"
@@ -13,11 +13,13 @@
   "keywords": [
     "web-scraping",
     "scraping",
+    "eu",
+    "gdpr",
+    "ai-agents",
+    "mcp",
     "markdown",
     "screenshots",
     "site-map",
-    "html",
-    "web-data",
-    "api"
+    "web-data"
   ]
 }

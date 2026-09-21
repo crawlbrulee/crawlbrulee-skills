@@ -4,13 +4,13 @@
     "name": "crawlbrulee",
     "url": "https://crawlbrulee.com"
   },
-  "description": "official agent skills and mcp wiring for the crawlbrulee web-scraping api.",
+  "description": "EU-native web scraping for AI agents & developers: agent skills and mcp wiring for the crawlbrulee api.",
   "plugins": [
     {
       "name": "crawlbrulee",
       "displayName": "crawlbrulee",
       "source": "./",
-      "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+      "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, processed fully in the EU.",
       "version": "1.0.0",
       "author": {
         "name": "crawlbrulee",
@@ -23,12 +23,14 @@
       "keywords": [
         "web-scraping",
         "scraping",
+        "eu",
+        "gdpr",
+        "ai-agents",
+        "mcp",
         "markdown",
         "screenshots",
         "site-map",
-        "html",
-        "web-data",
-        "api"
+        "web-data"
       ]
     }
   ]

@@ -1,7 +1,7 @@
 {
   "name": "crawlbrulee",
   "version": "1.0.0",
-  "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+  "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, processed fully in the EU.",
   "settings": [
     {
       "name": "crawlbrulee api key",
@@ -13,7 +13,10 @@
   "mcpServers": {
     "crawlbrulee": {
       "command": "npx",
-      "args": ["-y", "@crawlbrulee/mcp"]
+      "args": [
+        "-y",
+        "@crawlbrulee/mcp"
+      ]
     }
   }
 }

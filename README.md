@@ -3,7 +3,9 @@
 [![agent skills](https://img.shields.io/badge/agent%20skills-10-blue?style=flat-square)](https://agentskills.io/)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](./LICENSE)
 
-official [agent skills](https://agentskills.io/) for [crawlbrulee](https://crawlbrulee.com) — the web-scraping api that turns any url into clean markdown, html, links, images, screenshots, and metadata, and maps a site's urls.
+**EU-native web scraping for AI agents & developers.**
+
+official [agent skills](https://agentskills.io/) for [crawlbrulee](https://crawlbrulee.com). one call turns any url into clean markdown, screenshots, metadata and links, and maps a site's urls. the fetch, the render, the cache and your result stay on EU servers.
 
 drop these into any skills-aware coding agent (Claude Code, Cursor, Codex, Gemini, …) and it will know how to drive crawlbrulee through whichever interface fits — the cli, the mcp server, the js/ts or python sdk, or raw http.
 

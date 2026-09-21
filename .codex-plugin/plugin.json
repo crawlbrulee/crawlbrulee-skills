@@ -1,7 +1,7 @@
 {
   "name": "crawlbrulee",
   "version": "1.0.0",
-  "description": "official agent skills for crawlbrulee — turn any url into markdown, html, links, images, screenshots, and site maps.",
+  "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, processed fully in the EU.",
   "author": {
     "name": "crawlbrulee",
     "url": "https://crawlbrulee.com"
@@ -12,18 +12,20 @@
   "keywords": [
     "web-scraping",
     "scraping",
+    "eu",
+    "gdpr",
+    "ai-agents",
+    "mcp",
     "markdown",
     "screenshots",
     "site-map",
-    "html",
-    "web-data",
-    "api"
+    "web-data"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "crawlbrulee",
-    "shortDescription": "turn any url into markdown, html, links, images, screenshots, and site maps",
-    "longDescription": "crawlbrulee is a web-scraping api. you send a url and get back clean structured data: markdown, cleaned html, raw html, the page's links and images, a screenshot, and page metadata. you can also list the urls on a site before you scrape them. this plugin carries ten skills — one entry point, the shared api contract, one per capability (scrape, async scrape, map, screenshots), and one per interface (cli, mcp, js/ts sdk, python sdk) — so the agent knows which call to make and how to read the result.",
+    "shortDescription": "EU-native web scraping for AI agents & developers",
+    "longDescription": "crawlbrulee is an EU-native web scraping api for AI agents and developers. you send a url. one call returns clean markdown, screenshots, metadata and links.\n\neverything runs in the EU. the fetch, the render, the cache and your result never leave EU servers. the proxy exit is the one hop you choose: pick an EU exit and nothing leaves at all. gdpr-aligned, with a data processing agreement.\n\nthe output is made for models. markdown comes with the page chrome stripped and the links kept, ready for the prompt. a full-page screenshot can come back as a stack of tiles sized for an image model.\n\nthe hard parts are handled: headless Chrome when a page needs it, rotating proxies with country selection, automatic retries, ad and cookie-banner removal, caching, background jobs and signed webhooks.\n\nthis plugin carries ten skills: one entry point, the shared api contract, one per capability (scrape, async scrape, map, screenshots) and one per interface (cli, mcp, js/ts sdk, python sdk). your agent learns which call to make and how to read the result.\n\nstart free with 750 credits. no credit card.",
     "developerName": "crawlbrulee",
     "category": "Productivity",
     "capabilities": [
@@ -32,6 +34,7 @@
     "websiteURL": "https://crawlbrulee.com",
     "defaultPrompt": [
       "scrape https://example.com with crawlbrulee and give me the markdown",
+      "scrape https://example.com through an EU proxy exit with crawlbrulee",
       "use crawlbrulee to list the urls on example.com, then scrape the docs pages",
       "take a full-page screenshot of https://example.com with crawlbrulee",
       "check my crawlbrulee credit usage"
