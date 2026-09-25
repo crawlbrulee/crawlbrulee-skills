@@ -109,7 +109,7 @@ job = client.scrape_async(url="https://example.com")
 page = client.wait_for_scrape(job.job_id, interval=2.0, timeout=300.0)
 ```
 
-`wait_for_scrape`'s `timeout` is the **overall wait budget**, not an http timeout (`timeout=0` waits forever). it raises `CrawlbruleeError` with `error_name="job_failed"` if the job fails, or `"request_timeout"` if the budget runs out.
+`wait_for_scrape`'s `timeout` is the **overall wait budget**, not an http timeout (`timeout=0` waits forever). it raises `CrawlbruleeError` with `error_name="job_failed"` if the job fails, or `"request_timeout"` if the budget runs out. a job whose page was a `404` doesn't fail — it returns, and the result carries `page_status_code`.
 
 pass `webhook=` to `scrape_async` to be called instead of polling — see **crawlbrulee-scrape-async**.
 
@@ -118,19 +118,31 @@ pass `webhook=` to `scrape_async` to be called instead of polling — see **craw
 ```python
 page = client.scrape(url="https://example.com")
 
+if page.page_status_code is not None and page.page_status_code >= 400:
+    print("the site answered", page.page_status_code)   # a 404 page is data, not an error
+
 if page.response_meta:
     usage = page.response_meta.usage
-    print(usage.credits, usage.engine, usage.proxy, usage.screenshot_slices)
+    print(usage.total_credit_cost, usage.engine, usage.proxy, usage.screenshot_slicing_credit_cost)
 
 if page.screenshot:
     print(page.screenshot.url)
 ```
 
-two shapes to guard for: **`page.response_meta` is `Optional`** on a scrape (unlike `MapResponse.response_meta`, which is always there), and **`page.screenshot` is `Optional`** — when you requested other outputs too, a capture that couldn't be made leaves it `None` while the rest of the payload still arrives. `page.response_meta.usage` has `credits`, `engine`, `proxy`, and `screenshot_slices`; use `engine == "cache"` to identify a cache hit. a screenshot-only request that can't deliver raises instead (`error_name="unsupported_screenshot_output"` when the content type can't be screenshotted).
+**a page the site served never raises, whatever its status.** a `404`, `410` or `503` page returns like any page, with the site's status in `page.page_status_code`. check it before you use the content — the markdown of a `404` page is the site's "not found" text. it is `None` when the response came from before the field existed; then the page was served normally.
 
-`map()` returns `MapUsage` under `response_meta.usage`: `credits`, `engine`, and `proxy`.
+two more shapes to guard for: **`page.response_meta` is `Optional`** on a scrape (unlike `MapResponse.response_meta`, which is always there), and **`page.screenshot` is `Optional`** — when you requested other outputs too, a capture that couldn't be made leaves it `None` while the rest of the payload still arrives. a screenshot-only request that can't deliver raises instead (`error_name="unsupported_screenshot_output"` when the content type can't be screenshotted).
+
+`page.response_meta.usage` has `total_credit_cost` (what the call cost) and its parts, with `total_credit_cost == engine_credit_cost * proxy_multiplier + screenshot_slicing_credit_cost`, plus `engine` and `proxy`. use `engine == "cache"` to identify a cache hit. `total_credit_cost` and `screenshot_slicing_credit_cost` are always set — on an older response they are filled in from `credits` and `screenshot_slices`. `engine_credit_cost` and `proxy_multiplier` are `None` when the response doesn't send them. **`credits` and `screenshot_slices` are deprecated**: they hold the same values and will be removed in a future version.
+
+`map()` returns `MapUsage` under `response_meta.usage`: `total_credit_cost`,
+`engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`.
 map `engine` is `http` or `cache`; its resolved `proxy` is `basic` or `advanced`, never
-`auto`. map usage has no `screenshot_slices`.
+`auto`. map usage has nothing for screenshots, and a map has no `page_status_code`.
+
+`page_status_code`, the `*_credit_cost` fields, `proxy_multiplier` and `TargetUnreachableError`
+need `crawlbrulee` `1.1.0` or newer. on an older release, read `usage.credits` and
+`usage.screenshot_slices`, and upgrade to see the page's status.
 
 ## webhooks
 
@@ -169,6 +181,7 @@ every failure subclasses `CrawlbruleeError`, which carries `status`, `error_name
 | `AntibotBlockedError` | 403 `antibot_blocked` — the target site's bot protection blocked us; not a key problem, don't retry blindly |
 | `TooManyRedirectsError` | 422 `too_many_redirects` — the target site redirected in a loop; not a bad request, don't retry blindly |
 | `PageTooLargeError` | 422 `page_too_large` — the page's html was too large to process; terminal, don't retry it |
+| `TargetUnreachableError` | 502 `target_unreachable` — we could not reach the site at all; not billed, retrying later may help (from `1.1.0`; older releases raise a plain `CrawlbruleeError` with this `error_name`) |
 | `RateLimitError` | 429 — exposes `retry_after_ms`, `limited_by` |
 | `UsageAllocationError` | credit or concurrency cap — exposes `reason`, `usage` |
 | `ValidationError` | bad request (`invalid_url`, `url_too_long`, `blocked_url`, …) |
@@ -191,6 +204,8 @@ except UsageAllocationError as err:
 ```
 
 for exhaustive branching switch on `err.error_name`; `is_crawlbrulee_error(err)` is the type guard. the full error table is in **crawlbrulee-api**.
+
+a `404` page is **not** an error, so no class above catches it — check `page.page_status_code` on the result instead.
 
 ## see also
 

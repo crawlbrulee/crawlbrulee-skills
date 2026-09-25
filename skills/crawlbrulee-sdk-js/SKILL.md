@@ -68,20 +68,33 @@ const page = await cb.scrape({
   location: { locale: 'en-US', country: 'US' },
 })
 
+if (page.page_status_code !== undefined && page.page_status_code >= 400) {
+  console.warn(`the site answered ${page.page_status_code}`) // a 404 page is data, not an error
+}
 console.log(page.markdown)
 console.log(page.metadata?.title)
-console.log(page.response_meta.usage.credits, 'credits', page.response_meta.usage.engine, page.response_meta.usage.proxy)
+
+const usage = page.response_meta.usage
+console.log(usage.total_credit_cost ?? usage.credits, 'credits', usage.engine, usage.proxy)
 ```
 
-`ScrapeRequest` and `ScrapeResponse` in the package's types carry inline docs for every field. two shapes worth knowing:
+`ScrapeRequest` and `ScrapeResponse` in the package's types carry inline docs for every field. shapes worth knowing:
 
-- **`page.response_meta` is required** — no guard needed to read `page.response_meta.usage.credits`.
-- **`page.response_meta.usage` is `{ credits, engine, proxy, screenshot_slices }`**. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. credits are the engine base × resolved proxy multiplier + the slice add-on.
+- **a page the site served never throws, whatever its status.** a `404`, `410` or `503` page resolves like any page, with the site's status in `page.page_status_code`. check it before you use the content — the markdown of a `404` page is the site's "not found" text. the field is optional in the types because older responses don't carry it; when it is missing, the page was served normally.
+- **`page.response_meta` is required** — no guard needed to read `page.response_meta.usage`.
+- **`page.response_meta.usage`** has `total_credit_cost` (what the call cost) and its parts: `engine_credit_cost`, `proxy_multiplier` and `screenshot_slicing_credit_cost`, with `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost`. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. the new fields are optional in the types because older responses don't send them — read `usage.total_credit_cost ?? usage.credits`.
+- **`credits` and `screenshot_slices` are `@deprecated`.** they hold the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version.
 - **`page.screenshot` is optional.** when you requested other outputs too, a capture that couldn't be made omits the field while the rest of the payload still arrives — guard with `page.screenshot?.url`. a screenshot-**only** request that can't deliver throws instead (`errorName: 'unsupported_screenshot_output'` when the content type can't be screenshotted).
 
-`map()` returns `MapUsage` under `response_meta.usage`: `{ credits, engine, proxy }`. map
-`engine` is `http` or `cache`; its resolved `proxy` is `basic` or `advanced`, never `auto`.
-map usage has no `screenshot_slices`.
+`map()` returns `MapUsage` under `response_meta.usage`: `total_credit_cost`,
+`engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`
+(read `usage.total_credit_cost ?? usage.credits`). map `engine` is `http` or `cache`; its
+resolved `proxy` is `basic` or `advanced`, never `auto`. map usage has nothing for screenshots,
+and a map has no `page_status_code`.
+
+`page_status_code`, the `*_credit_cost` fields, `proxy_multiplier` and `TargetUnreachableError`
+are typed from `@crawlbrulee/sdk` `1.1.0`. an older release still returns the fields at runtime,
+but its types don't name them — upgrade rather than casting.
 
 ## background jobs
 
@@ -94,7 +107,7 @@ const page = await cb.waitForScrape(job_id, {
 })
 ```
 
-`waitForScrape`'s `timeoutMs` is the **overall wait budget**, not a per-request timeout — the http timeout stays whatever you gave the constructor. it rejects with `errorName: 'job_failed'` if the job fails, or `'request_timeout'` if the budget runs out.
+`waitForScrape`'s `timeoutMs` is the **overall wait budget**, not a per-request timeout — the http timeout stays whatever you gave the constructor. it rejects with `errorName: 'job_failed'` if the job fails, or `'request_timeout'` if the budget runs out. a job whose page was a `404` doesn't fail — it resolves, and the result carries `page_status_code`.
 
 pass a `webhook` to `scrapeAsync` to be called instead of polling. see **crawlbrulee-scrape-async**.
 
@@ -137,6 +150,7 @@ every failure extends `CrawlbruleeError`, which carries `status`, `errorName`, a
 | `AntibotBlockedError` | 403 `antibot_blocked` — the target site's bot protection blocked us; not a key problem, don't retry blindly |
 | `TooManyRedirectsError` | 422 `too_many_redirects` — the target site redirected in a loop; not a bad request, don't retry blindly |
 | `PageTooLargeError` | 422 `page_too_large` — the page's html was too large to process; terminal, don't retry it |
+| `TargetUnreachableError` | 502 `target_unreachable` — we could not reach the site at all; not billed, retrying later may help (from `1.1.0`; older releases raise a plain `CrawlbruleeError` with this `errorName`) |
 | `RateLimitError` | 429 — exposes `retryAfterMs`, `limitedBy` |
 | `UsageAllocationError` | credit or concurrency cap — exposes `reason`, `usage` |
 | `ValidationError` | bad request (`invalid_url`, `url_too_long`, `blocked_url`, …) |
@@ -162,6 +176,8 @@ try {
 ```
 
 for exhaustive branching switch on `err.errorName` — the literal union is exported as `ApiErrorName`, and `isCrawlbruleeError(err)` narrows an `unknown`. **`errorName` can be `null`** on a generic transport failure, so handle that case. the full error table is in **crawlbrulee-api**.
+
+a `404` page is **not** an error, so no class above catches it — check `page.page_status_code` on the result instead.
 
 ## cancellation & timeouts
 

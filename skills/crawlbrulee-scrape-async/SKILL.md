@@ -44,8 +44,9 @@ curl -s https://api.crawlbrulee.com/api/scrape/result/683a1f2b4c5d6e7f8a9b0c1d \
 
 **job states: `pending` → `running` → `done` | `failed`.** the status body is snake_case throughout (`job_id`, `created_at`).
 
-- once `done`, the **status** body also carries `response_meta.usage` — so you can see what a job charged without fetching the whole result.
-- on `failed`, `error` explains what went wrong.
+- once `done`, the **status** body also carries `response_meta.usage` — so you can see what a job charged without fetching the whole result. read `total_credit_cost`, and fall back to the deprecated `credits` on older responses (see **crawlbrulee-api**).
+- **`done` means a page came back — not that the page was good.** a job whose page was a `404` or `503` ends `done`, and its result carries `page_status_code`. check that field on the result before you trust the content, exactly as for a sync scrape.
+- **`failed` means no page came back** — for example the site could not be reached, bot protection blocked us, or the page was too large. `error` explains what went wrong. a failed job is not billed.
 - **`result` errors if the job isn't finished** — poll `status` first. it also `404`s for an unknown job, or one whose result has aged out.
 
 results don't live forever; see [async scrape](https://crawlbrulee.com/docs/scrape/async) for the current retention window. poll on a sensible interval — a couple of seconds is plenty. every client ships a helper that wraps this loop (`waitForScrape` / `wait_for_scrape` / `crawlbrulee scrape wait`), so prefer that over hand-rolling it.
@@ -83,16 +84,25 @@ the destination is per job; the **signing secret is per organization** and confi
     "job_id": "…",
     "status": "success",
     "url": "https://example.com",
+    "page_status_code": 200,
     "completed_at": "…",
     "metadata": { "order": "abc", "attempt": 2 },
-    "response_meta": { "usage": { "credits": 1, "engine": "http", "proxy": "basic", "screenshot_slices": 0 } }
+    "response_meta": {
+      "usage": {
+        "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1, "screenshot_slicing_credit_cost": 0,
+        "engine": "http", "proxy": "basic",
+        "credits": 1, "screenshot_slices": 0   // deprecated names, same values
+      }
+    }
   }
 }
 ```
 
 **the delivery is a pointer, not the content** — it never carries the scraped page. read `data.job_id` and fetch the result from `GET /api/scrape/result/{job_id}`.
 
-**`data.status` uses a different vocabulary from job status: `success` | `failed` | `cancelled`** — not `done`. this trips people up. `response_meta` is present only on `success`; `error` only on `failed`.
+**`data.status` uses a different vocabulary from job status: `success` | `failed` | `cancelled`** — not `done`. this trips people up. `page_status_code` and `response_meta` are present only on `success`; `error` only on `failed`.
+
+**`success` means a page came back, not that the page was good.** a `404` page is a `success` with `page_status_code: 404`. check `data.page_status_code` before you fetch and use the result — you can skip the fetch entirely for an error page. older deliveries may not carry the field; when it is missing, the page was served normally.
 
 deliveries are at-least-once and we retry a failed delivery a few times before giving up. a delivery counts as accepted only on a `2xx` — a redirect is treated as a failure, so point the webhook straight at the final url. **de-duplicate on `event_id`** (also sent as the `X-Cwbl-Event-Id` header), which stays stable across retries.
 

@@ -84,7 +84,11 @@ this is the same url form `/scrape` reports for the page it fetched, so map-then
       "discovery_cap_reason": null,
       "sitemaps_skipped": 0
     },
-    "usage": { "credits": 1, "engine": "http", "proxy": "basic" }
+    "usage": {
+      "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1,
+      "engine": "http", "proxy": "basic",
+      "credits": 1   // deprecated name, same value as total_credit_cost
+    }
   }
 }
 ```
@@ -96,6 +100,14 @@ this is the same url form `/scrape` reports for the page it fetched, so map-then
 `links[]` has no `source` field — don't expect one, and don't infer it from position.
 
 **page 1 is the useful page** — if you only want a site's structure, one page at a small `limit` is usually enough.
+
+### when the site answers with errors
+
+map has **no `page_status_code`**. a map reads many things — sitemap files and the home page — so no single status would describe it.
+
+- **a map that found urls is a `200` with those urls**, even if the home page itself was a `404`.
+- **if the site answered only with statuses we don't bill (a `5xx`, for example), or not at all, you get a `200` with an empty `links` list**, and it costs 0. an empty map from a site that answered `404` is billed like any map, because a `404` is a real answer. an empty list is not proof the site has no pages — scrape the home page to see what the site is answering.
+- in rare cases map answers `target_unreachable` (502): we could not reach the site at all. it is not billed; retry later, and check the url if it keeps happening.
 
 ### pagination
 
@@ -142,7 +154,7 @@ branch on this field, because only one of its values is yours to fix:
 - **`sitemap_only: true` is faster and more predictable** when a site has a good sitemap and you don't care about homepage-only links.
 - **filter to a section** with a path prefix before scraping — mapping a docs site and keeping only `/guide/` is the common shape.
 - **map is cache-friendly.** repeat maps of the same root are served from cache within the freshness window; pass `cache.max_age: 0` when you specifically need a fresh inventory.
-- **map costs credits** — a fresh map reports `engine: "http"`; a cached map reports `engine: "cache"`. those are the only map engine values. the returned `proxy` is the resolved `basic` or `advanced` tier, never `auto`. read `response_meta.usage.credits` for the result, and see <https://crawlbrulee.com/pricing>. don't assume it's free.
+- **map costs credits** — a fresh map reports `engine: "http"`; a cached map reports `engine: "cache"`. those are the only map engine values. the returned `proxy` is the resolved `basic` or `advanced` tier, never `auto`. read `response_meta.usage.total_credit_cost` for what it cost (`total_credit_cost = engine_credit_cost × proxy_multiplier`), and fall back to the deprecated `credits` on older responses that don't have it. see <https://crawlbrulee.com/pricing>. don't assume it's free.
 
 ## see also
 

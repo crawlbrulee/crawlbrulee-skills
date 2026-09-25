@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-scrape
-description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata. covers every extract format and which are on by default, js rendering, excluding page furniture, cache and proxy options, and the full response shape including warnings and unsupported fields.
+description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata. covers every extract format and which are on by default, js rendering, excluding page furniture, cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -95,6 +95,7 @@ fields you didn't request are simply absent.
 {
   "requested_url": "http://example.com",  // your url, echoed verbatim
   "url": "https://example.com",           // the url actually scraped — canonical, after redirects
+  "page_status_code": 200,                // the status the site answered with — check it
   "content_type": "text/html",
   "markdown": "…",
   "cleaned_html": "…",
@@ -105,16 +106,24 @@ fields you didn't request are simply absent.
   "metadata": { "title": "…", "description": "…", "og_title": "…", "favicon_url": "…" },
   "unsupported_fields": [],
   "warnings": [],
-  "response_meta": { "usage": { "credits": 1, "engine": "http", "proxy": "basic", "screenshot_slices": 0 } }
+  "response_meta": {
+    "usage": {
+      "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1, "screenshot_slicing_credit_cost": 0,
+      "engine": "http", "proxy": "basic",
+      "credits": 1, "screenshot_slices": 0   // deprecated names, same values
+    }
+  }
 }
 ```
+
+- **check `page_status_code` before you trust the content.** a page the site really served comes back as a `200` from us, whatever its own status — so a `404`, `410`, `401`, `451` or `503` page arrives with its content, like any page. the markdown of a `404` page is the site's "not found" text. treat `page_status_code >= 400` as an error page from the site, and show that status rather than passing the text on as real content. it is the status of the final page, after redirects. older responses may not carry the field; when it is missing, the page was served normally.
 
 - **you get both urls back.** `requested_url` is the url you sent, echoed verbatim — before any redirects. `url` is the url that was actually scraped: after redirects, in normalized form. links, images, and the `internal` flag are computed against `url`; use `requested_url` when you need to correlate a response with the url you submitted.
 - **`links[].href` comes back exactly as it appears in the page** — absolute or relative, whatever the author wrote. resolve it yourself against `url` if you need an absolute link. `internal` tells you whether it points at the same site.
 - **`images[].url` is always absolute** — we resolve document-relative `src`s against the page url and preserve query strings. links and images differ here deliberately; don't assume one behaves like the other.
 - **`links` and `images` each have a per-page ceiling.** a page with an unusual number of either is cut at the cap rather than trimmed silently — you get the entries up to the ceiling plus a `links_truncated` or `inline_images_truncated` code in `warnings`. the current ceilings are in the [docs](https://crawlbrulee.com/docs/scrape).
 - **`metadata`** fields are all optional and omitted when the page doesn't have them.
-- **`response_meta`** is always present — see **crawlbrulee-api**.
+- **`response_meta`** is always present. read `usage.total_credit_cost` for what the call cost, and fall back to the deprecated `usage.credits` when an older response doesn't have it. a page whose status we don't bill (a `5xx`, `403`, `451`, …) shows `0` there. see **crawlbrulee-api** for every usage field and the billing rule.
 
 ### `unsupported_fields`
 
@@ -147,12 +156,14 @@ cache hits and async result fetches carry their warnings too.
 
 ## when a page comes back empty or a request fails
 
-two levers, in this order:
+first look at `page_status_code`. if the site answered `404` or `410`, the page isn't there — that is the site's real answer, and no option will change it. if it answered with a `5xx`, the site had a problem; that page costs 0, and a retry later may get the real page.
+
+if the status is fine but the content is thin, two levers, in this order:
 
 1. **`require_js: true`** — use it when the content renders client-side.
 2. **`proxy: "advanced"`** — use the enhanced proxy tier for a higher retrieval success rate.
 
-an `antibot_blocked` error means the target's bot protection blocked the request; don't retry it automatically. a `too_many_redirects` error (422) means the target redirected the request in a loop; same rule. a `page_too_large` error (422) means the page's html was too large to process — terminal, so don't retry it; scrape a smaller page instead. `require_js` adds latency; see <https://crawlbrulee.com/pricing> for how the proxy tier affects cost.
+an `antibot_blocked` error means the target's bot protection blocked the request; don't retry it automatically. a `too_many_redirects` error (422) means the target redirected the request in a loop; same rule. a `page_too_large` error (422) means the page's html was too large to process — terminal, so don't retry it; scrape a smaller page instead. a `target_unreachable` error (502) means we could not reach the site at all — no page came back and you are not billed; retry once after a pause, and if it keeps failing, check the url and whether the site is up. `require_js` adds latency; see <https://crawlbrulee.com/pricing> for how the proxy tier affects cost.
 
 ## see also
 

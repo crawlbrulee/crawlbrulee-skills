@@ -56,7 +56,7 @@ all five reach the same api. pick by where the work happens:
 | building a Python app, sync or async | **python sdk** (`crawlbrulee`) | **crawlbrulee-sdk-python** |
 | in any other language, or you want zero dependencies | **raw http** | **crawlbrulee-api** |
 
-whatever you pick, read **crawlbrulee-api** too — it carries the parts that don't change with the interface: the response format, caching, proxy tiers, and the error model.
+whatever you pick, read **crawlbrulee-api** too — it carries the parts that don't change with the interface: the page's status, what gets billed, the response format, caching, proxy tiers, and the error model.
 
 ## your first scrape
 
@@ -92,11 +92,17 @@ for mcp, configure the server once (see **crawlbrulee-mcp**) and the agent calls
 
 > heads up: a bare scrape returns `metadata` + `cleaned_html`. ask for `markdown`, `links`, `images`, `raw_html`, or `screenshot` explicitly. the cli is the exception — it defaults to markdown + metadata.
 
+## check the page's status
+
+a page the site really served is a successful scrape, whatever its status. a `404` or `503` page comes back with its content, and the site's status is in `page_status_code`. **check it before you use the content** — the markdown of a `404` page is the site's "not found" text, not what you were looking for. older responses may not carry the field; when it is missing, the page was served normally. see **crawlbrulee-api**.
+
 ## before you run up a bill
 
-- **every response tells you what it cost.** scrape responses carry `response_meta.usage` = `{ credits, engine, proxy, screenshot_slices }`; map responses carry `{ credits, engine, proxy }`, with `engine` limited to `http | cache` and resolved `proxy` limited to `basic | advanced`. `engine: "cache"` identifies a cache hit. read it per call instead of guessing.
+- **every response tells you what it cost.** scrape responses carry `response_meta.usage` with `total_credit_cost` (what the call cost) and the parts that make it up: `engine_credit_cost`, `proxy_multiplier` and `screenshot_slicing_credit_cost`, plus `engine` and the resolved `proxy`. map carries the same minus the slicing part, with `engine` limited to `http | cache` and `proxy` limited to `basic | advanced`. `engine: "cache"` identifies a cache hit. read it per call instead of guessing.
+- **`credits` and `screenshot_slices` are deprecated** — same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and they will be removed in a future version. older responses may only carry the old names, so read `total_credit_cost` and fall back to `credits`.
 - **check `usage` before a big job** to see remaining credits and your concurrency cap.
-- **cost depends on the delivered engine and resolved proxy tier**: for scrape, `credits = engine base × proxy multiplier + screenshot_slices`; map has no slice add-on. a fully cached repeat is free — 0 credits; a scrape cache hit that produces new slices costs the +1 slice add-on. for what anything actually costs, see <https://crawlbrulee.com/pricing> — it's the single source of truth, so read it there rather than assuming.
+- **cost depends on the delivered engine and resolved proxy tier**: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost`; map has no slicing part. a fully cached repeat is free — 0 credits; a scrape cache hit that produces new slices costs the +1 slicing add-on. for what anything actually costs, see <https://crawlbrulee.com/pricing> — it's the single source of truth, so read it there rather than assuming.
+- **what gets billed:** we bill 2xx and 4xx pages, except 403, 407, 408, 429 and 451. 5xx pages are never billed, and errors are never billed. so a `404` page costs the same as any page; a `503` page costs 0.
 - **cap your own fan-out.** there's no crawl endpoint, so a "crawl" is a loop you write — decide up front how many pages you'll scrape.
 
 ## see also

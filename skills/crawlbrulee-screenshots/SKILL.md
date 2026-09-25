@@ -59,7 +59,7 @@ a `full_page` capture of a long page can be enormous. add a single `slice` actio
 "actions_after": [{ "type": "slice", "height": 800 }]   // height ≥ 500
 ```
 
-the response then carries a `slices[]` array alongside the main image. there's a cap on how many tiles we'll produce for one capture — see the docs. slices produced during this request add a flat 1 credit to the engine base × proxy multiplier, including when a cache hit needs a new slice variant. reusing an existing cached variant is free. check <https://crawlbrulee.com/pricing>, and read `response_meta.usage` — especially `credits` and `screenshot_slices` — to see what you were actually charged.
+the response then carries a `slices[]` array alongside the main image. there's a cap on how many tiles we'll produce for one capture — see the docs. slicing during this request adds a flat 1 credit on top of the engine base × proxy multiplier, however many tiles it makes — including when a cache hit needs a new slice variant. reusing an existing cached variant is free, and so is a page we don't bill (a `5xx` page, for example) — every cost part is 0 then. check <https://crawlbrulee.com/pricing>, and read `response_meta.usage` — `total_credit_cost` for the whole charge, `screenshot_slicing_credit_cost` for the slicing part — to see what you were actually charged. older responses may only carry the deprecated `credits` and `screenshot_slices`, which hold the same values.
 
 unlike `actions_before`, `actions_after` does **not** disable caching.
 
@@ -116,6 +116,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 ## tips
 
 - **check before you read.** when you requested other outputs alongside the screenshot, a failed capture just leaves the `screenshot` field absent — guard for it rather than assuming. a screenshot-only request that can't deliver errors instead, so there you handle the error, not a missing field.
+- **check `page_status_code` too.** a page the site served with an error status is still a page, so you get a screenshot of it — a `404` page shoots like any other. look at the result's `page_status_code` before you treat the image as the page you wanted. see **crawlbrulee-scrape**.
 - **very long pages get capped.** we stop at a maximum capture height and flag it with a `screenshot_truncated` entry in the response's `warnings` array. if you see that code, the image and its slices stop at the cap.
 - **screenshot settings are part of the cache key.** the same url at a different capture type, viewport, or device mode is a different entry — changing any of them means a fresh fetch.
 - **lazy content missing?** add an `actions_before` scroll and a short wait, or set `require_js: true` when the content renders client-side.

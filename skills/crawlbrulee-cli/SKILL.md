@@ -183,9 +183,21 @@ check `usage` before a credit-heavy job.
 
 - terminal → **text**; piped, redirected, or `-o <file>` → **json**.
 - force it with `--json` or `--text`; `--compact` gives one-line json.
-- in text mode, a scrape prints a trailing `# usage: <credits> credits · engine <engine> · proxy <tier> · slices <0|1>` comment — the same `response_meta.usage` you'd get in json. map prints the same comment without the slice field because map does not produce screenshots; its engine is `http` or `cache`, and its resolved proxy is `basic` or `advanced` (never `auto`). `engine cache` identifies a cache hit.
+- in text mode, a scrape prints a trailing `# usage: <n> credits · engine <engine> · proxy <tier> · slices <0|1>` comment — the same `response_meta.usage` you'd get in json. `<n>` is what the call cost (`total_credit_cost`). map prints the same comment without the slice field because map does not produce screenshots; its engine is `http` or `cache`, and its resolved proxy is `basic` or `advanced` (never `auto`). `engine cache` identifies a cache hit.
+- in json, read `response_meta.usage.total_credit_cost` for the cost. `credits` and `screenshot_slices` are deprecated — same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, removed in a future version. older responses may only have the old names, so fall back: `jq '.response_meta.usage | .total_credit_cost // .credits'`.
 - errors go to stderr as `error: <name> — <message>`.
 - exit code is `0` on success, `1` on any failure, so you can branch on it in scripts.
+
+### a `404` page is a success
+
+a page the site really served is a successful scrape, whatever its own status. a `404`, `410` or `503` page prints like any page, and the command **exits `0`** — the scrape worked. the site's status is in `page_status_code`:
+
+```bash
+crawlbrulee scrape url https://example.com/old --json | jq .page_status_code          # → 404
+crawlbrulee scrape url https://example.com/old --json | jq -e '.page_status_code < 400' # exit 1 on an error page
+```
+
+from cli `5.1.0`, text mode adds the status to the end of the usage comment when it isn't 2xx: `# usage: 15 credits · engine browser · proxy advanced · slices 0 · page status 404`. older clis don't show it; use `--json` there. **check the status before you use the content in a script** — the markdown of a `404` page is the site's "not found" text. if the json has no `page_status_code`, the response came from before the field existed, and the page was served normally.
 
 ## common errors
 
@@ -195,12 +207,13 @@ error: usage_allocation_error — out of credits (reason: credit_limit)
 error: antibot_blocked — protected page
 error: too_many_redirects — Target site redirected the request too many times.
 error: page_too_large — The page is too large or too complex to convert.
+error: target_unreachable — Could not reach the target site. (retrying later may help)
 error: invalid_url — not a valid URL
 error: service_unavailable — service temporarily unavailable (temporary — safe to retry)
 error: not logged in — run `crawlbrulee login` or set CRAWLBRULEE_API_KEY
 ```
 
-empty page? use `--require-js` when content renders client-side; for general retrieval failures, `--proxy advanced` uses the higher-success tier. an `antibot_blocked` response means the target's bot protection blocked the request; it isn't a retry signal. neither is `too_many_redirects` — the target redirected in a loop. `page_too_large` means the page's html was too large to process; it is terminal, so don't run the same command again. out of credits or hitting concurrency? check `crawlbrulee usage`. a `service_unavailable` is a 503 on our side rather than a key problem — wait a moment and run the same command again, don't re-login or rotate the key. the full error reference is in **crawlbrulee-api**.
+empty page? use `--require-js` when content renders client-side; for general retrieval failures, `--proxy advanced` uses the higher-success tier. an `antibot_blocked` response means the target's bot protection blocked the request; it isn't a retry signal. neither is `too_many_redirects` — the target redirected in a loop. `page_too_large` means the page's html was too large to process; it is terminal, so don't run the same command again. `target_unreachable` means we could not reach the site at all — nothing was billed; run it again after a pause, and if it keeps failing, check the url and whether the site is up. a `404` page is not an error at all — see above. out of credits or hitting concurrency? check `crawlbrulee usage`. a `service_unavailable` is a 503 on our side rather than a key problem — wait a moment and run the same command again, don't re-login or rotate the key. the full error reference is in **crawlbrulee-api**.
 
 ## see also
 

@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-api
-description: use when you need crawlbrulee's shared api contract — the base url, bearer auth, the full endpoint list, the response_meta usage object, caching, proxy tiers, location targeting, and the error model. read this whichever interface you call from. also covers calling the http api directly with curl or a generated client.
+description: use when you need crawlbrulee's shared api contract — the base url, bearer auth, the full endpoint list, the page_status_code field, what gets billed, the response_meta usage object, caching, proxy tiers, location targeting, and the error model. read this whichever interface you call from. also covers calling the http api directly with curl or a generated client.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -10,7 +10,7 @@ allowed-tools: Bash(curl:*)
 
 # 🍮 crawlbrulee http api
 
-this skill carries the parts of crawlbrulee that don't change with the interface — auth, the endpoint list, the response format, caching, proxies, and errors. the sdks, the cli, and the mcp are all thin wrappers over exactly this, so read it whatever you're calling from.
+this skill carries the parts of crawlbrulee that don't change with the interface — auth, the endpoint list, the page's status, billing, the response format, caching, proxies, and errors. the sdks, the cli, and the mcp are all thin wrappers over exactly this, so read it whatever you're calling from.
 
 it doubles as the raw-http guide: if there's no first-party client for your stack, or you want zero dependencies, everything here is callable with curl.
 
@@ -38,35 +38,73 @@ export CRAWLBRULEE_API_KEY="cwbl_…"
 | GET | `/api/usage` | billing-cycle snapshot | below |
 | GET | `/api/whoami` | org + token identity | below |
 
+## the page's own status: `page_status_code`
+
+**our http status says whether we did our job. the target site's status is part of the data.**
+
+if the site really served a page, you get a `200` from us with that page — whatever status the site gave it. a `404`, `410`, `401`, `451` or `503` page comes back with its content, and the site's status sits in `page_status_code` at the top level of the result:
+
+```jsonc
+{
+  "url": "https://example.com/old-page",
+  "page_status_code": 404,              // what the site answered, after redirects
+  "markdown": "# Page not found …",
+  "response_meta": { "usage": { … } }
+}
+```
+
+- **check `page_status_code` before you trust the content.** the markdown of a `404` page is the site's "not found" page, not the article you wanted. treat `page_status_code >= 400` as an error page from the site and say so — don't hand that text on as if it were real content.
+- it is the status of the final page, after redirects. when the page is rendered in a browser, it is the status of the page itself, not of its images or scripts.
+- it is on every scrape result: sync `POST /api/scrape`, `GET /api/scrape/result/{job_id}`, and the `data` of a successful `scrape.complete` webhook. map has no page status — a map reads many files, not one page.
+- older responses may not carry the field yet. when it is missing, the page was served normally.
+
+a non-2xx from us means something else: the request was wrong, we could not reach the site or get the real page, or something broke on our side. see [errors](#errors).
+
+## what gets billed
+
+errors are never billed. for a page the site served, the page's status decides:
+
+- **we bill 2xx and 4xx pages, except 403, 407, 408, 429 and 451.**
+- **5xx pages are never billed.**
+
+so a `404` or `410` page costs the same as any page, and a `503` page costs 0. an unbilled page still comes back as a `200` with its content. its `total_credit_cost`, `engine_credit_cost` and `screenshot_slicing_credit_cost` are all `0`, while `engine`, `proxy` and `proxy_multiplier` still show how it was fetched.
+
 ## the `response_meta` object
 
-every successful scrape carries `response_meta.usage` with the full billing shape below. async
-status and successful `scrape.complete` webhooks use the same usage fields:
+every successful scrape carries `response_meta.usage`, so you can see what the call cost. the async status body (once `done`) and a successful `scrape.complete` webhook carry the same fields:
 
 ```jsonc
 "response_meta": {
   "usage": {
-    "credits": 1,             // engine base × proxy multiplier + slices
-    "engine": "http",         // http, browser, screenshot, or cache
-    "proxy": "basic",          // the resolved tier that delivered it
-    "screenshot_slices": 0     // flat slice add-on: 0 or 1
+    "total_credit_cost": 1,               // what this call cost you
+    "engine_credit_cost": 1,              // engine base: http 1, browser 3, screenshot 5, cache 0
+    "proxy_multiplier": 1,                // 1 for basic, 5 for advanced
+    "screenshot_slicing_credit_cost": 0,  // screenshot slicing add-on: 0 or 1
+    "engine": "http",                     // http, browser, screenshot, or cache
+    "proxy": "basic",                     // the resolved tier that delivered it
+    "credits": 1,                         // deprecated — same value as total_credit_cost
+    "screenshot_slices": 0                // deprecated — same value as screenshot_slicing_credit_cost
   }
 }
 ```
 
-- `credits` is what you were actually charged for this call — read it instead of predicting it.
-- `engine` is the delivered billing base: `http` (1 credit — a plain fetch, no JavaScript ran), `browser` (3 — the page was rendered, as with `require_js: true`), `screenshot` (5 — a capture was made), or `cache` (0). `engine: "cache"` identifies a cache hit.
-- `proxy` is the **resolved** tier. if you asked for `auto`, this tells you which tier ran. it is never `auto`.
-- `screenshot_slices` is `1` when this request produced screenshot slices, otherwise `0`. it adds one credit to the engine base × proxy multiplier, including when `engine` is `cache`.
-- for scrape, the billing formula is `credits = engine base × proxy multiplier + screenshot_slices`; map has no slice add-on and uses `credits = engine base × proxy multiplier`. `basic` multiplies by 1 and `advanced` by 5. read the returned `credits` rather than recomputing it.
+- **`total_credit_cost`** is what you were charged for this call. read it instead of predicting it.
+- the other parts explain the price. this always holds: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost`.
+- **`engine_credit_cost`** is the engine base: `1` for `http` (a plain fetch, no JavaScript ran), `3` for `browser` (the page was rendered, as with `require_js: true`), `5` for `screenshot` (a capture was made), `0` for `cache`. it is also `0` when the page is not billed.
+- **`proxy_multiplier`** is `1` for `basic` and `5` for `advanced`. it is always there, even when the engine cost is `0`.
+- **`screenshot_slicing_credit_cost`** is `1` when this request cut a screenshot into slices, otherwise `0`. it is a flat +1, added after the multiplier, however many slices were made — also when `engine` is `cache`.
+- **`engine`** is the delivered engine. `engine: "cache"` identifies a cache hit.
+- **`proxy`** is the **resolved** tier. if you asked for `auto`, this tells you which tier ran. it is never `auto`.
 
-map also carries `response_meta`, with `pagination`, `truncation`, and a usage block containing
-`credits`, `engine`, and `proxy`. map responses do not include `screenshot_slices`, because map
-does not produce screenshots. map `engine` is exactly `http` for fresh discovery or `cache` for
-a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and
-`truncation` live **inside** `response_meta`, not at the top level.
+**`credits` and `screenshot_slices` are deprecated.** they carry the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version. new code should read the new names.
 
-what a call costs, and how credits are counted, is at <https://crawlbrulee.com/pricing>. treat that page as the source of truth — `response_meta.usage` tells you the rest after the fact.
+**read the new names with a fallback.** older responses may only carry `credits`, `engine`, `proxy` and `screenshot_slices`. read `total_credit_cost` first and fall back to `credits` when it is missing (`usage.total_credit_cost ?? usage.credits`); do the same for `screenshot_slicing_credit_cost` and `screenshot_slices`.
+
+map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
+
+what a call costs is at <https://crawlbrulee.com/pricing>. treat that page as the source of truth — `response_meta.usage` tells you the rest after the fact.
+
+`/api/usage` is different: its `total_credits`, `used_credits` and `available_credits` are amounts for your whole account, not for one call.
 
 ## proxy tiers
 
@@ -130,7 +168,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 { "name": "too_many_requests", "message": "…", "details": { "retry_after_ms": 12000, "limited_by": "org" } }
 ```
 
-**branch on `name`, not on the status code.** the codes are stable; statuses are not always what you'd guess (`scrape_error` mirrors the target site's status, so a 404 page gives you `scrape_error` at 404).
+**branch on `name`, not on the status code.** the names are stable. a page the site served is never an error — even a `404` or `503` page is a `200` with the site's status in `page_status_code` (see above). errors are never billed.
 
 | `name` | what to do |
 | --- | --- |
@@ -139,21 +177,25 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `invalid_credentials` | missing, expired, or revoked api key — a genuine key problem, not a transient one (see `service_unavailable`) |
 | `access_denied` | the token can't reach this resource |
 | `not_found` | unknown async job id, or a result that has aged out |
-| `too_many_requests` | you're going too fast — back off, honoring `details.retry_after_ms` |
+| `too_many_requests` | you're going too fast, or the target site rate-limited us — back off, honoring `details.retry_after_ms` when it is there, and space out requests to that site |
 | `usage_allocation_error` | credit or concurrency cap — `details.reason` says which (`credit_limit`, `concurrency_limit`, `duplicate_reservation`, `internal_error`) |
 | `antibot_blocked` | the target's bot protection blocked us — verify your use is permitted and don't retry automatically |
 | `too_many_redirects` | the target redirected the request in a loop, or through more hops than we follow (HTTP 422) — the target's doing, not a bad request; retrying rarely helps |
 | `page_too_large` | the page's html was too large to process (HTTP 422) — terminal, the same url fails the same way; scrape a smaller page instead |
-| `scrape_error`, `unsupported_content` | the fetch itself failed, or the content type can't be extracted |
+| `target_unreachable` | we could not reach the site at all (HTTP 502) — for example it did not answer in time, or its tls certificate was bad. no page came back, so there is no `page_status_code`. not billed. retrying later may help; if it keeps failing, check the url is right and the site is up |
+| `unsupported_content` | the page's content type can't be extracted (HTTP 415) |
+| `scrape_error` | most often: you asked for an async result before the job finished — poll `status` first. it can also mean we could not read your request, for example the body was not valid json |
 | `unsupported_screenshot_output` | the request asked only for a screenshot and the page's content type can't be screenshotted — request another format, or drop the screenshot |
 | `request_timeout` | took too long — safe to retry |
 | `job_failed` | an async job ended in `failed` |
-| `internal_server_error` | our side — retry, then tell us |
+| `internal_server_error` | something went wrong on our side — retry. it can also happen when the site could not be reached, so check the url is right and the site is up before you tell us |
 | `service_unavailable` | we couldn't look up your token or reach a dependency just then — your key is fine, back off and retry |
 
 `details` is only present on `too_many_requests` (`retry_after_ms`, `limited_by`) and `usage_allocation_error` (`reason` plus current-vs-max numbers). rate-limit headers ride on every response — `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `Retry-After` on a 429. read those rather than hardcoding a rate; the published limits are in [rate limits](https://crawlbrulee.com/docs/rate-limits).
 
-for general retrieval failures, `require_js: true` renders JavaScript content and `proxy: "advanced"` uses the higher-success proxy tier. an `antibot_blocked` response means the target's bot protection blocked us; it isn't a retry signal — a retry might succeed by applying more sophisticated parameters, i.e. the `advanced` proxy or `require_js: true`, but it isn't a guarantee. a `too_many_redirects` response (422) means the target redirected in a loop; that isn't one either — both `scrape` and `map` can return it. a `page_too_large` response (422) means the page's html was too large to process — terminal, so don't retry it; only `scrape` returns it.
+for general retrieval failures, `require_js: true` renders JavaScript content and `proxy: "advanced"` uses the higher-success proxy tier. an `antibot_blocked` response means the target's bot protection blocked us; it isn't a retry signal — a retry might succeed by applying more sophisticated parameters, i.e. the `advanced` proxy or `require_js: true`, but it isn't a guarantee. a `too_many_redirects` response (422) means the target redirected in a loop; that isn't one either — both `scrape` and `map` can return it. a `page_too_large` response (422) means the page's html was too large to process — terminal, so don't retry it; only `scrape` returns it. a `target_unreachable` response (502) means we could not reach the site at all — retry once after a pause, and stop if it keeps happening; both `scrape` and `map` can return it, though for `map` it is rare.
+
+a page the site answered with an error status is **not** in this list: it is a `200` with `page_status_code`. a `5xx` page is often temporary on the site's side, and it costs 0, so a retry later is cheap. a `404` or `410` page is the site's real answer — retrying won't change it.
 
 ## generate a client
 

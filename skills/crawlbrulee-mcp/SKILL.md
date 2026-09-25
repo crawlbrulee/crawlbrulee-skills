@@ -76,7 +76,9 @@ only `url` is required. a bare call returns metadata + cleaned html — **markdo
 }
 ```
 
-`proxy` defaults to `auto` (starts basic, escalates to advanced on failure). screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage` = `{ credits, engine, proxy, screenshot_slices }`, so the agent can see per-call cost without calling `usage`. use `engine: "cache"` to identify a cache hit.
+`proxy` defaults to `auto` (starts basic, escalates to advanced on failure). screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage`, so the agent can see per-call cost without calling `usage`: `total_credit_cost` is what the call cost, and `engine_credit_cost`, `proxy_multiplier` and `screenshot_slicing_credit_cost` are the parts that make it up. `credits` and `screenshot_slices` are deprecated copies of `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version; older responses may only carry those, so fall back to them when the new names are missing. use `engine: "cache"` to identify a cache hit.
+
+**check `page_status_code` before you use the content.** a page the site really served is a normal `scrape` result, not a tool error — a `404`, `410` or `503` page comes back with its content, and the site's status is in `page_status_code` at the top level. the markdown of a `404` page is the site's "not found" text; tell the user the page answered `404` instead of treating that text as the page. `5xx` pages are never billed, and neither are `403`, `407`, `408`, `429` or `451` pages — see **crawlbrulee-api**. if a result has no `page_status_code`, it came from before the field existed, and the page was served normally.
 
 see **crawlbrulee-scrape** and **crawlbrulee-screenshots** for what the fields mean.
 
@@ -95,7 +97,7 @@ for slow pages or batches: submit, poll, fetch. `scrape_async` takes the same in
 }
 ```
 
-`scrape_async` returns `{ "job_id": "…" }`. poll `scrape_status` until `done`, then call `scrape_result` — which returns the same shape as `scrape`. `scrape_status` carries `response_meta.usage` once the job is `done`, and an `error` when it's `failed`. `scrape_result` errors if the job hasn't finished, so check status first.
+`scrape_async` returns `{ "job_id": "…" }`. poll `scrape_status` until `done`, then call `scrape_result` — which returns the same shape as `scrape`, `page_status_code` included. `scrape_status` carries `response_meta.usage` once the job is `done`, and an `error` when it's `failed`. `scrape_result` errors if the job hasn't finished, so check status first. `done` means a page came back — a `404` page ends `done` too — so check `page_status_code` on the result. `failed` means no page came back.
 
 with a `webhook` attached we deliver a single signed `scrape.complete` `POST` when the job finishes, with your `metadata` echoed back — react on completion instead of polling. see **crawlbrulee-scrape-async** for the lifecycle and signature verification.
 
@@ -112,7 +114,7 @@ with a `webhook` attached we deliver a single signed `scrape.complete` `POST` wh
 }
 ```
 
-use it to plan which pages to scrape — there's no crawl tool, so a crawl is map plus repeated `scrape`. the response's `response_meta` carries `pagination`, `truncation`, and map usage (`credits`, `engine`, `proxy`; no `screenshot_slices`). map `engine` is `http` or `cache`, and its resolved `proxy` is `basic` or `advanced` (never `auto`).
+use it to plan which pages to scrape — there's no crawl tool, so a crawl is map plus repeated `scrape`. the response's `response_meta` carries `pagination`, `truncation`, and map usage (`total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`; nothing for screenshots). map has no `page_status_code`: a map that found urls is a normal result even if the home page was a `404`, and a site that answered only with statuses we don't bill (a `5xx`, for example), or not at all, gives an empty list that costs 0. map `engine` is `http` or `cache`, and its resolved `proxy` is `basic` or `advanced` (never `auto`).
 
 **check `response_meta.truncation` before you treat the list as the whole site.** `limit` only trims this response — page for the rest. `max_urls` is different: discovery *stops* there, so a big site comes back as exactly 5000 links with `response_capped: false`, which looks complete and isn't. the honest signal is `discovery_capped: true` plus `discovery_cap_reason`:
 
@@ -141,7 +143,9 @@ branch on the code. the set is the api's own error names (see **crawlbrulee-api*
 | `crawlbrulee_error` | an api error without a typed name |
 | `internal_error` | a bug in this mcp — please open an issue |
 
-the ones worth handling: `too_many_requests` (back off), `usage_allocation_error` (out of credits or concurrency — show the user `usage`), `antibot_blocked` (the target's bot protection blocked the request — don't retry automatically), `too_many_redirects` (the target redirected in a loop — same, don't retry automatically), `page_too_large` (the page's html was too large to process — terminal, never retry it), `request_timeout` (safe to retry), `service_unavailable` (a 503 from our side — back off and retry; the key is fine, don't prompt the user for a new one).
+the ones worth handling: `too_many_requests` (back off), `usage_allocation_error` (out of credits or concurrency — show the user `usage`), `antibot_blocked` (the target's bot protection blocked the request — don't retry automatically), `too_many_redirects` (the target redirected in a loop — same, don't retry automatically), `page_too_large` (the page's html was too large to process — terminal, never retry it), `target_unreachable` (HTTP 502 — we could not reach the site at all, and it isn't billed; retry once after a pause, then check the url with the user), `request_timeout` (safe to retry), `service_unavailable` (a 503 from our side — back off and retry; the key is fine, don't prompt the user for a new one).
+
+from mcp `1.1.0`, a `target_unreachable` error adds a short next step after the message; the `[target_unreachable]` prefix is the same, so branch on that. a `404` page is not in this list — it is a normal result with `page_status_code: 404`.
 
 ## when to prefer mcp
 
