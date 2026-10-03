@@ -172,7 +172,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 
 | `name` | what to do |
 | --- | --- |
-| `invalid_url`, `url_too_long`, `unsupported_url_schema`, `url_credentials_not_supported`, `blocked_url` | the url was rejected before we fetched it — fix the input |
+| `invalid_url`, `url_too_long`, `unsupported_url_schema`, `url_credentials_not_supported`, `blocked_url` | the url was rejected before we fetched it — fix the input. `blocked_url` also comes back when the site redirected to an address we don't fetch — retrying won't help |
 | `validation_error` | the request body failed validation |
 | `invalid_credentials` | missing, expired, or revoked api key — a genuine key problem, not a transient one (see `service_unavailable`) |
 | `access_denied` | the token can't reach this resource |

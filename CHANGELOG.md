@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## unreleased
+
+### changed
+
+- `blocked_url` (HTTP 400) also comes back when the site redirected to an address we don't fetch. retrying won't help. noted in the `crawlbrulee-api` error table.
+
 ## 1.1.0 (2026-09-30)
 
 ### added
