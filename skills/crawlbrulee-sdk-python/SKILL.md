@@ -134,16 +134,15 @@ if page.screenshot:
 
 two more shapes to guard for: **`page.response_meta` is `Optional`** on a scrape (unlike `MapResponse.response_meta`, which is always there), and **`page.screenshot` is `Optional`** — when you requested other outputs too, a capture that couldn't be made leaves it `None` while the rest of the payload still arrives. a screenshot-only request that can't deliver raises instead (`error_name="unsupported_screenshot_output"` when the content type can't be screenshotted).
 
-`page.response_meta.usage` has `total_credit_cost` (what the call cost) and its parts, with the parts adding up to it (formula below), plus `engine` and `proxy`. use `engine == "cache"` to identify a cache hit. `total_credit_cost` and `screenshot_slicing_credit_cost` are always set — on an older response they are filled in from `credits` and `screenshot_slices`. `engine_credit_cost`, `proxy_multiplier` and `zero_data_retention_credit_cost` are `None` when the response doesn't send them; the formula is `total_credit_cost == engine_credit_cost * proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`. **`credits` and `screenshot_slices` are deprecated**: they hold the same values and will be removed in a future version.
+`page.response_meta.usage` has `total_credit_cost` (what the call cost) and its parts, with the parts adding up to it (formula below), plus `engine` and `proxy`. use `engine == "cache"` to identify a cache hit. `total_credit_cost` and `screenshot_slicing_credit_cost` are always set. `engine_credit_cost`, `proxy_multiplier` and `zero_data_retention_credit_cost` are `None` when the response doesn't send them; the formula is `total_credit_cost == engine_credit_cost * proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`.
 
 `map()` returns `MapUsage` under `response_meta.usage`: `total_credit_cost`,
-`engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`, and the deprecated `credits`.
+`engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`.
 map `engine` is `http` or `cache`; its resolved `proxy` is `basic` or `advanced`, never
 `auto`. map usage has nothing for screenshots, and a map has no `page_status_code`.
 
 `page_status_code`, the `*_credit_cost` fields, `proxy_multiplier` and `TargetUnreachableError`
-need `crawlbrulee` `1.1.0` or newer. on an older release, read `usage.credits` and
-`usage.screenshot_slices`, and upgrade to see the page's status.
+need `crawlbrulee` `1.1.0` or newer. on an older release, upgrade to see the page's status.
 
 **zero data retention.** `zero_data_retention=True` is accepted on `scrape`, `scrape_async` and `map`, sync and async clients alike; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call raises `ZeroDataRetentionNotEnabledError` (needs `crawlbrulee` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 

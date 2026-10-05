@@ -113,8 +113,7 @@ fields you didn't request are simply absent.
     "usage": {
       "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1,
       "screenshot_slicing_credit_cost": 0, "zero_data_retention_credit_cost": 0,
-      "engine": "http", "proxy": "basic",
-      "credits": 1, "screenshot_slices": 0   // deprecated names, same values
+      "engine": "http", "proxy": "basic"
     }
   }
 }
@@ -127,7 +126,7 @@ fields you didn't request are simply absent.
 - **`images[].url` is always absolute** — we resolve document-relative `src`s against the page url and preserve query strings. links and images differ here deliberately; don't assume one behaves like the other.
 - **`links` and `images` each have a per-page ceiling.** a page with an unusual number of either is cut at the cap rather than trimmed silently — you get the entries up to the ceiling plus a `links_truncated` or `inline_images_truncated` code in `warnings`. the current ceilings are in the [docs](https://crawlbrulee.com/docs/scrape).
 - **`metadata`** fields are all optional and omitted when the page doesn't have them.
-- **`response_meta`** is always present. read `usage.total_credit_cost` for what the call cost, and fall back to the deprecated `usage.credits` when an older response doesn't have it. a page whose status we don't bill (a `5xx`, `403`, `451`, …) shows `0` there, with every cost part `0`. see **crawlbrulee-api** for every usage field and the billing rule.
+- **`response_meta`** is always present. read `usage.total_credit_cost` for what the call cost. a page whose status we don't bill (a `5xx`, `403`, `451`, …) shows `0` there, with every cost part `0`. see **crawlbrulee-api** for every usage field and the billing rule.
 
 ### `unsupported_fields`
 

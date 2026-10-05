@@ -76,20 +76,19 @@ console.log(page.markdown)
 console.log(page.metadata?.title)
 
 const usage = page.response_meta.usage
-console.log(usage.total_credit_cost ?? usage.credits, 'credits', usage.engine, usage.proxy)
+console.log(usage.total_credit_cost, 'credits', usage.engine, usage.proxy)
 ```
 
 `ScrapeRequest` and `ScrapeResponse` in the package's types carry inline docs for every field. shapes worth knowing:
 
 - **a page the site served never throws, whatever its status.** a `404`, `410` or `503` page resolves like any page, with the site's status in `page.page_status_code`. check it before you use the content — the markdown of a `404` page is the site's "not found" text. the field is optional in the types because older responses don't carry it; when it is missing, the page was served normally.
 - **`page.response_meta` is required** — no guard needed to read `page.response_meta.usage`.
-- **`page.response_meta.usage`** has `total_credit_cost` (what the call cost) and its parts: `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost`, with `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. the new fields are optional in the types because older responses don't send them — read `usage.total_credit_cost ?? usage.credits`.
-- **`credits` and `screenshot_slices` are `@deprecated`.** they hold the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version.
+- **`page.response_meta.usage`** has `total_credit_cost` (what the call cost) and its parts: `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost`, with `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. the new fields are optional in the types because older responses don't send them.
 - **`page.screenshot` is optional.** when you requested other outputs too, a capture that couldn't be made omits the field while the rest of the payload still arrives — guard with `page.screenshot?.url`. a screenshot-**only** request that can't deliver throws instead (`errorName: 'unsupported_screenshot_output'` when the content type can't be screenshotted).
 
 `map()` returns `MapUsage` under `response_meta.usage`: `total_credit_cost`,
-`engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`, and the deprecated `credits`
-(read `usage.total_credit_cost ?? usage.credits`). map `engine` is `http` or `cache`; its
+`engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`.
+map `engine` is `http` or `cache`; its
 resolved `proxy` is `basic` or `advanced`, never `auto`. map usage has nothing for screenshots,
 and a map has no `page_status_code`.
 

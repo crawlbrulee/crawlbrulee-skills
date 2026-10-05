@@ -188,7 +188,7 @@ check `usage` before a credit-heavy job.
 - terminal → **text**; piped, redirected, or `-o <file>` → **json**.
 - force it with `--json` or `--text`; `--compact` gives one-line json.
 - in text mode, a scrape prints a trailing `# usage: <n> credits · engine <engine> · proxy <tier> · slices <0|1>` comment — the same `response_meta.usage` you'd get in json. `<n>` is what the call cost (`total_credit_cost`). map prints the same comment without the slice field because map does not produce screenshots; its engine is `http` or `cache`, and its resolved proxy is `basic` or `advanced` (never `auto`). `engine cache` identifies a cache hit.
-- in json, read `response_meta.usage.total_credit_cost` for the cost. `credits` and `screenshot_slices` are deprecated — same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, removed in a future version. older responses may only have the old names, so fall back: `jq '.response_meta.usage | .total_credit_cost // .credits'`.
+- in json, read `response_meta.usage.total_credit_cost` for the cost.
 - errors go to stderr as `error: <name> — <message>`.
 - exit code is `0` on success, `1` on any failure, so you can branch on it in scripts.
 

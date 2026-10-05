@@ -44,7 +44,7 @@ curl -s https://api.crawlbrulee.com/api/scrape/result/683a1f2b4c5d6e7f8a9b0c1d \
 
 **job states: `pending` → `running` → `done` | `failed`.** the status body is snake_case throughout (`job_id`, `created_at`).
 
-- once `done`, the **status** body also carries `response_meta.usage` — so you can see what a job charged without fetching the whole result. read `total_credit_cost`, and fall back to the deprecated `credits` on older responses (see **crawlbrulee-api**).
+- once `done`, the **status** body also carries `response_meta.usage` — so you can see what a job charged without fetching the whole result. read `total_credit_cost` (see **crawlbrulee-api**).
 - **`done` means a page came back — not that the page was good.** a job whose page was a `404` or `503` ends `done`, and its result carries `page_status_code`. check that field on the result before you trust the content, exactly as for a sync scrape.
 - **`failed` means no page came back** — for example the site could not be reached, bot protection blocked us, or the page was too large. `error` explains what went wrong. a failed job is not billed.
 - **`result` errors if the job isn't finished** — poll `status` first. it also `404`s for an unknown job, or one whose result has aged out.
@@ -93,8 +93,7 @@ the destination is per job; the **signing secret is per organization** and confi
       "usage": {
         "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1,
         "screenshot_slicing_credit_cost": 0, "zero_data_retention_credit_cost": 0,
-        "engine": "http", "proxy": "basic",
-        "credits": 1, "screenshot_slices": 0   // deprecated names, same values
+        "engine": "http", "proxy": "basic"
       }
     }
   }

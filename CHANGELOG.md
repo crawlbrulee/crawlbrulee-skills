@@ -15,6 +15,10 @@ this project follows [Semantic Versioning](https://semver.org). the version is t
 
 - `blocked_url` (HTTP 400) also comes back when the site redirected to an address we don't fetch. retrying won't help. noted in the `crawlbrulee-api` error table.
 
+### removed
+
+- the deprecated `credits` and `screenshot_slices` in `response_meta.usage` are no longer mentioned, and the skills no longer explain how to fall back to them. read `total_credit_cost` and `screenshot_slicing_credit_cost`, which always had the same values.
+
 ## 1.1.0 (2026-09-30)
 
 ### added

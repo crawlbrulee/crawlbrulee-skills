@@ -82,9 +82,7 @@ every successful scrape carries `response_meta.usage`, so you can see what the c
     "screenshot_slicing_credit_cost": 0,  // screenshot slicing add-on: 0 or 1
     "zero_data_retention_credit_cost": 0, // zero data retention add-on: 0 or 1
     "engine": "http",                     // http, browser, screenshot, or cache
-    "proxy": "basic",                     // the resolved tier that delivered it
-    "credits": 1,                         // deprecated — same value as total_credit_cost
-    "screenshot_slices": 0                // deprecated — same value as screenshot_slicing_credit_cost
+    "proxy": "basic"                      // the resolved tier that delivered it
   }
 }
 ```
@@ -98,11 +96,7 @@ every successful scrape carries `response_meta.usage`, so you can see what the c
 - **`engine`** is the delivered engine. `engine: "cache"` identifies a cache hit.
 - **`proxy`** is the **resolved** tier. if you asked for `auto`, this tells you which tier ran. it is never `auto`.
 
-**`credits` and `screenshot_slices` are deprecated.** they carry the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version. new code should read the new names. `zero_data_retention_credit_cost` is new and has no deprecated twin; on an older response it is missing, which means `0`.
-
-**read the new names with a fallback.** older responses may only carry `credits`, `engine`, `proxy` and `screenshot_slices`. read `total_credit_cost` first and fall back to `credits` when it is missing (`usage.total_credit_cost ?? usage.credits`); do the same for `screenshot_slicing_credit_cost` and `screenshot_slices`.
-
-map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`, and the deprecated `credits`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier + zero_data_retention_credit_cost`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
+map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier + zero_data_retention_credit_cost`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
 
 what a call costs is at <https://crawlbrulee.com/pricing>. treat that page as the source of truth — `response_meta.usage` tells you the rest after the fact.
 
