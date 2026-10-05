@@ -45,6 +45,9 @@ curl -X POST https://api.crawlbrulee.com/api/map \
 | `proxy` | `basic` · `advanced` · `auto` | `auto` | see **crawlbrulee-api** |
 | `cache.max_age` | seconds or iso-8601 datetime | see docs | `0` forces a fresh map |
 | `location.country` | string | — | alpha-2, or `eu` / `europe` |
+| `zero_data_retention` | boolean | `false` | keep the result out of the shared cache, +1 credit — see below |
+
+**`zero_data_retention: true`** (top level, not inside `cache`) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
 two differences from scrape worth remembering: **map takes `location.country` but not `location.locale`**, and it has no `require_js`.
 
@@ -86,6 +89,7 @@ this is the same url form `/scrape` reports for the page it fetched, so map-then
     },
     "usage": {
       "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1,
+      "zero_data_retention_credit_cost": 0,
       "engine": "http", "proxy": "basic",
       "credits": 1   // deprecated name, same value as total_credit_cost
     }
@@ -154,7 +158,7 @@ branch on this field, because only one of its values is yours to fix:
 - **`sitemap_only: true` is faster and more predictable** when a site has a good sitemap and you don't care about homepage-only links.
 - **filter to a section** with a path prefix before scraping — mapping a docs site and keeping only `/guide/` is the common shape.
 - **map is cache-friendly.** repeat maps of the same root are served from cache within the freshness window; pass `cache.max_age: 0` when you specifically need a fresh inventory.
-- **map costs credits** — a fresh map reports `engine: "http"`; a cached map reports `engine: "cache"`. those are the only map engine values. the returned `proxy` is the resolved `basic` or `advanced` tier, never `auto`. read `response_meta.usage.total_credit_cost` for what it cost (`total_credit_cost = engine_credit_cost × proxy_multiplier`), and fall back to the deprecated `credits` on older responses that don't have it. see <https://crawlbrulee.com/pricing>. don't assume it's free.
+- **map costs credits** — a fresh map reports `engine: "http"`; a cached map reports `engine: "cache"`. those are the only map engine values. the returned `proxy` is the resolved `basic` or `advanced` tier, never `auto`. read `response_meta.usage.total_credit_cost` for what it cost (`total_credit_cost = engine_credit_cost × proxy_multiplier + zero_data_retention_credit_cost`), and fall back to the deprecated `credits` on older responses that don't have it. see <https://crawlbrulee.com/pricing>. don't assume it's free.
 
 ## see also
 

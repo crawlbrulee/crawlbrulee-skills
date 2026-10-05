@@ -66,6 +66,7 @@ const page = await cb.scrape({
   cleanup: { ads_and_popups: true, exclude_selectors: ['nav', 'footer'] },
   cache: { max_age: 3600 },
   location: { locale: 'en-US', country: 'US' },
+  zero_data_retention: false, // true keeps the result out of the shared cache — see below
 })
 
 if (page.page_status_code !== undefined && page.page_status_code >= 400) {
@@ -82,12 +83,12 @@ console.log(usage.total_credit_cost ?? usage.credits, 'credits', usage.engine, u
 
 - **a page the site served never throws, whatever its status.** a `404`, `410` or `503` page resolves like any page, with the site's status in `page.page_status_code`. check it before you use the content — the markdown of a `404` page is the site's "not found" text. the field is optional in the types because older responses don't carry it; when it is missing, the page was served normally.
 - **`page.response_meta` is required** — no guard needed to read `page.response_meta.usage`.
-- **`page.response_meta.usage`** has `total_credit_cost` (what the call cost) and its parts: `engine_credit_cost`, `proxy_multiplier` and `screenshot_slicing_credit_cost`, with `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost`. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. the new fields are optional in the types because older responses don't send them — read `usage.total_credit_cost ?? usage.credits`.
+- **`page.response_meta.usage`** has `total_credit_cost` (what the call cost) and its parts: `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost`, with `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. the new fields are optional in the types because older responses don't send them — read `usage.total_credit_cost ?? usage.credits`.
 - **`credits` and `screenshot_slices` are `@deprecated`.** they hold the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version.
 - **`page.screenshot` is optional.** when you requested other outputs too, a capture that couldn't be made omits the field while the rest of the payload still arrives — guard with `page.screenshot?.url`. a screenshot-**only** request that can't deliver throws instead (`errorName: 'unsupported_screenshot_output'` when the content type can't be screenshotted).
 
 `map()` returns `MapUsage` under `response_meta.usage`: `total_credit_cost`,
-`engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`
+`engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`, and the deprecated `credits`
 (read `usage.total_credit_cost ?? usage.credits`). map `engine` is `http` or `cache`; its
 resolved `proxy` is `basic` or `advanced`, never `auto`. map usage has nothing for screenshots,
 and a map has no `page_status_code`.
@@ -95,6 +96,8 @@ and a map has no `page_status_code`.
 `page_status_code`, the `*_credit_cost` fields, `proxy_multiplier` and `TargetUnreachableError`
 are typed from `@crawlbrulee/sdk` `1.1.0`. an older release still returns the fields at runtime,
 but its types don't name them — upgrade rather than casting.
+
+**zero data retention.** `zero_data_retention: true` is accepted on `scrape()`, `scrapeAsync()` and `map()`; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call throws `ZeroDataRetentionNotEnabledError` (needs `@crawlbrulee/sdk` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
 ## background jobs
 
@@ -151,6 +154,7 @@ every failure extends `CrawlbruleeError`, which carries `status`, `errorName`, a
 | `TooManyRedirectsError` | 422 `too_many_redirects` — the target site redirected in a loop; not a bad request, don't retry blindly |
 | `PageTooLargeError` | 422 `page_too_large` — the page's html was too large to process; terminal, don't retry it |
 | `TargetUnreachableError` | 502 `target_unreachable` — we could not reach the site at all; not billed, retrying later may help (from `1.1.0`; older releases raise a plain `CrawlbruleeError` with this `errorName`) |
+| `ZeroDataRetentionNotEnabledError` | 403 `zero_data_retention_not_enabled` — `zero_data_retention` is not enabled for your organization; not billed (from `1.2.0`; older releases raise a plain `CrawlbruleeError` with this `errorName`) |
 | `RateLimitError` | 429 — exposes `retryAfterMs`, `limitedBy` |
 | `UsageAllocationError` | credit or concurrency cap — exposes `reason`, `usage` |
 | `ValidationError` | bad request (`invalid_url`, `url_too_long`, `blocked_url`, …) |

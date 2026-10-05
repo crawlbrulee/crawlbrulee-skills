@@ -39,10 +39,13 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 | `cache.max_age` | seconds or iso-8601 datetime | see docs | `0` forces a fresh fetch |
 | `location.locale` | string | — | bcp-47, e.g. `en-US` |
 | `location.country` | string | — | alpha-2, or `eu` / `europe` |
+| `zero_data_retention` | boolean | `false` | keep the result out of the shared cache, +1 credit — see below |
 
 `max_age` is the only cache field — `cache` rejects anything else.
 
 **the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html`) still matches the same entry.
+
+**`zero_data_retention: true`** goes at the top level of the body, not inside `cache`. keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
 for a background job instead of a blocking call, the body is identical — see **crawlbrulee-scrape-async**.
 
@@ -108,7 +111,8 @@ fields you didn't request are simply absent.
   "warnings": [],
   "response_meta": {
     "usage": {
-      "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1, "screenshot_slicing_credit_cost": 0,
+      "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1,
+      "screenshot_slicing_credit_cost": 0, "zero_data_retention_credit_cost": 0,
       "engine": "http", "proxy": "basic",
       "credits": 1, "screenshot_slices": 0   // deprecated names, same values
     }
@@ -123,7 +127,7 @@ fields you didn't request are simply absent.
 - **`images[].url` is always absolute** — we resolve document-relative `src`s against the page url and preserve query strings. links and images differ here deliberately; don't assume one behaves like the other.
 - **`links` and `images` each have a per-page ceiling.** a page with an unusual number of either is cut at the cap rather than trimmed silently — you get the entries up to the ceiling plus a `links_truncated` or `inline_images_truncated` code in `warnings`. the current ceilings are in the [docs](https://crawlbrulee.com/docs/scrape).
 - **`metadata`** fields are all optional and omitted when the page doesn't have them.
-- **`response_meta`** is always present. read `usage.total_credit_cost` for what the call cost, and fall back to the deprecated `usage.credits` when an older response doesn't have it. a page whose status we don't bill (a `5xx`, `403`, `451`, …) shows `0` there. see **crawlbrulee-api** for every usage field and the billing rule.
+- **`response_meta`** is always present. read `usage.total_credit_cost` for what the call cost, and fall back to the deprecated `usage.credits` when an older response doesn't have it. a page whose status we don't bill (a `5xx`, `403`, `451`, …) shows `0` there, with every cost part `0`. see **crawlbrulee-api** for every usage field and the billing rule.
 
 ### `unsupported_fields`
 

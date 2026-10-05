@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-api
-description: use when you need crawlbrulee's shared api contract — the base url, bearer auth, the full endpoint list, the page_status_code field, what gets billed, the response_meta usage object, caching, proxy tiers, location targeting, and the error model. read this whichever interface you call from. also covers calling the http api directly with curl or a generated client.
+description: use when you need crawlbrulee's shared api contract — the base url, bearer auth, the full endpoint list, the page_status_code field, what gets billed, the response_meta usage object, caching, zero data retention, proxy tiers, location targeting, and the error model. read this whichever interface you call from. also covers calling the http api directly with curl or a generated client.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -10,7 +10,7 @@ allowed-tools: Bash(curl:*)
 
 # 🍮 crawlbrulee http api
 
-this skill carries the parts of crawlbrulee that don't change with the interface — auth, the endpoint list, the page's status, billing, the response format, caching, proxies, and errors. the sdks, the cli, and the mcp are all thin wrappers over exactly this, so read it whatever you're calling from.
+this skill carries the parts of crawlbrulee that don't change with the interface — auth, the endpoint list, the page's status, billing, the response format, caching, zero data retention, proxies, and errors. the sdks, the cli, and the mcp are all thin wrappers over exactly this, so read it whatever you're calling from.
 
 it doubles as the raw-http guide: if there's no first-party client for your stack, or you want zero dependencies, everything here is callable with curl.
 
@@ -67,7 +67,7 @@ errors are never billed. for a page the site served, the page's status decides:
 - **we bill 2xx and 4xx pages, except 403, 407, 408, 429 and 451.**
 - **5xx pages are never billed.**
 
-so a `404` or `410` page costs the same as any page, and a `503` page costs 0. an unbilled page still comes back as a `200` with its content. its `total_credit_cost`, `engine_credit_cost` and `screenshot_slicing_credit_cost` are all `0`, while `engine`, `proxy` and `proxy_multiplier` still show how it was fetched.
+so a `404` or `410` page costs the same as any page, and a `503` page costs 0. an unbilled page still comes back as a `200` with its content. its `total_credit_cost`, `engine_credit_cost`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost` are all `0`, while `engine`, `proxy` and `proxy_multiplier` still show how it was fetched.
 
 ## the `response_meta` object
 
@@ -80,6 +80,7 @@ every successful scrape carries `response_meta.usage`, so you can see what the c
     "engine_credit_cost": 1,              // engine base: http 1, browser 3, screenshot 5, cache 0
     "proxy_multiplier": 1,                // 1 for basic, 5 for advanced
     "screenshot_slicing_credit_cost": 0,  // screenshot slicing add-on: 0 or 1
+    "zero_data_retention_credit_cost": 0, // zero data retention add-on: 0 or 1
     "engine": "http",                     // http, browser, screenshot, or cache
     "proxy": "basic",                     // the resolved tier that delivered it
     "credits": 1,                         // deprecated — same value as total_credit_cost
@@ -89,22 +90,35 @@ every successful scrape carries `response_meta.usage`, so you can see what the c
 ```
 
 - **`total_credit_cost`** is what you were charged for this call. read it instead of predicting it.
-- the other parts explain the price. this always holds: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost`.
+- the other parts explain the price. this always holds: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`.
 - **`engine_credit_cost`** is the engine base: `1` for `http` (a plain fetch, no JavaScript ran), `3` for `browser` (the page was rendered, as with `require_js: true`), `5` for `screenshot` (a capture was made), `0` for `cache`. it is also `0` when the page is not billed.
 - **`proxy_multiplier`** is `1` for `basic` and `5` for `advanced`. it is always there, even when the engine cost is `0`.
 - **`screenshot_slicing_credit_cost`** is `1` when this request cut a screenshot into slices, otherwise `0`. it is a flat +1, added after the multiplier, however many slices were made — also when `engine` is `cache`.
+- **`zero_data_retention_credit_cost`** is `1` when `zero_data_retention: true` added its credit to a billed, fresh result (see [zero data retention](#zero-data-retention)), otherwise `0`. it is always there; on an older response it is missing, which means `0`.
 - **`engine`** is the delivered engine. `engine: "cache"` identifies a cache hit.
 - **`proxy`** is the **resolved** tier. if you asked for `auto`, this tells you which tier ran. it is never `auto`.
 
-**`credits` and `screenshot_slices` are deprecated.** they carry the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version. new code should read the new names.
+**`credits` and `screenshot_slices` are deprecated.** they carry the same values as `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version. new code should read the new names. `zero_data_retention_credit_cost` is new and has no deprecated twin; on an older response it is missing, which means `0`.
 
 **read the new names with a fallback.** older responses may only carry `credits`, `engine`, `proxy` and `screenshot_slices`. read `total_credit_cost` first and fall back to `credits` when it is missing (`usage.total_credit_cost ?? usage.credits`); do the same for `screenshot_slicing_credit_cost` and `screenshot_slices`.
 
-map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
+map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`, and the deprecated `credits`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier + zero_data_retention_credit_cost`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
 
 what a call costs is at <https://crawlbrulee.com/pricing>. treat that page as the source of truth — `response_meta.usage` tells you the rest after the fact.
 
 `/api/usage` is different: its `total_credits`, `used_credits` and `available_credits` are amounts for your whole account, not for one call.
+
+## zero data retention
+
+add `zero_data_retention: true` at the top level of the body (not inside `cache`) on `POST /api/scrape`, `POST /api/scrape/async` and `POST /api/map`. keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
+
+```bash
+curl -X POST https://api.crawlbrulee.com/api/scrape \
+  -H "Authorization: Bearer $CRAWLBRULEE_API_KEY" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","extract":{"markdown":true},"zero_data_retention":true}'
+```
+
+when it is not enabled, the request fails with a `403` `zero_data_retention_not_enabled`, not billed. the added credit shows as `zero_data_retention_credit_cost` in `response_meta.usage`.
 
 ## proxy tiers
 
@@ -168,7 +182,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 { "name": "too_many_requests", "message": "…", "details": { "retry_after_ms": 12000, "limited_by": "org" } }
 ```
 
-**branch on `name`, not on the status code.** the names are stable. a page the site served is never an error — even a `404` or `503` page is a `200` with the site's status in `page_status_code` (see above). errors are never billed.
+**branch on `name`, not on the status code** — a `403` can be `antibot_blocked` or `zero_data_retention_not_enabled`, for example. the names are stable. a page the site served is never an error — even a `404` or `503` page is a `200` with the site's status in `page_status_code` (see above). errors are never billed.
 
 | `name` | what to do |
 | --- | --- |
@@ -176,6 +190,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `validation_error` | the request body failed validation |
 | `invalid_credentials` | missing, expired, or revoked api key — a genuine key problem, not a transient one (see `service_unavailable`) |
 | `access_denied` | the token can't reach this resource |
+| `zero_data_retention_not_enabled` | HTTP 403 — you sent `zero_data_retention: true` but it is not enabled for your organization. not billed; send the request without it |
 | `not_found` | unknown async job id, or a result that has aged out |
 | `too_many_requests` | you're going too fast, or the target site rate-limited us — back off, honoring `details.retry_after_ms` when it is there, and space out requests to that site |
 | `usage_allocation_error` | credit or concurrency cap — `details.reason` says which (`credit_limit`, `concurrency_limit`, `duplicate_reservation`, `internal_error`) |

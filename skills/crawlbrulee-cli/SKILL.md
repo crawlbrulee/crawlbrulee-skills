@@ -58,6 +58,7 @@ note the shape: **`scrape` is a command group, so scraping a url is `scrape url 
 | `--cache-max-age <seconds>` | | freshness cutoff; `0` forces a fresh fetch |
 | `--locale <bcp47>` | | e.g. `en-US` |
 | `--country <iso>` | | e.g. `US`, or `eu` / `europe` |
+| `--zero-data-retention` | | keep the result out of the shared cache, +1 credit (cli `5.2.0`+) |
 | `-o, --output <file>` | | write to a file instead of stdout |
 
 ```bash
@@ -70,6 +71,8 @@ crawlbrulee scrape url https://example.com --json | jq .response_meta.usage
 ```
 
 `--proxy` takes `basic`, `advanced`, or `auto` only. omit it and the server applies its default.
+
+`--zero-data-retention` (also on `scrape url --async` and on `map`) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). an older cli fails with `unknown option`; check `crawlbrulee --version`.
 
 ### screenshot shorthand (`-ss` / `--screenshot`)
 
@@ -155,6 +158,7 @@ crawlbrulee map https://example.com --text > urls.txt   # one url per line
 | `--proxy <tier>` | `basic` · `advanced` · `auto` |
 | `--cache-max-age <seconds>` | freshness cutoff |
 | `--country <iso>` | proxy egress country |
+| `--zero-data-retention` | keep the result out of the shared cache, +1 credit (cli `5.2.0`+) |
 | `-o, --output <file>` | write to a file instead of stdout |
 
 `--internal-only` and `--external-only` can't be combined. **there's no `--locale` on map** — it's a scrape-only option.
@@ -208,12 +212,13 @@ error: antibot_blocked — protected page
 error: too_many_redirects — Target site redirected the request too many times.
 error: page_too_large — The page is too large or too complex to convert.
 error: target_unreachable — Could not reach the target site. (retrying later may help)
+error: zero_data_retention_not_enabled — zero_data_retention is not enabled for your organization. Contact us to turn it on.
 error: invalid_url — not a valid URL
 error: service_unavailable — service temporarily unavailable (temporary — safe to retry)
 error: not logged in — run `crawlbrulee login` or set CRAWLBRULEE_API_KEY
 ```
 
-empty page? use `--require-js` when content renders client-side; for general retrieval failures, `--proxy advanced` uses the higher-success tier. an `antibot_blocked` response means the target's bot protection blocked the request; it isn't a retry signal. neither is `too_many_redirects` — the target redirected in a loop. `page_too_large` means the page's html was too large to process; it is terminal, so don't run the same command again. `target_unreachable` means we could not reach the site at all — nothing was billed; run it again after a pause, and if it keeps failing, check the url and whether the site is up. a `404` page is not an error at all — see above. out of credits or hitting concurrency? check `crawlbrulee usage`. a `service_unavailable` is a 503 on our side rather than a key problem — wait a moment and run the same command again, don't re-login or rotate the key. the full error reference is in **crawlbrulee-api**.
+empty page? use `--require-js` when content renders client-side; for general retrieval failures, `--proxy advanced` uses the higher-success tier. an `antibot_blocked` response means the target's bot protection blocked the request; it isn't a retry signal. neither is `too_many_redirects` — the target redirected in a loop. `page_too_large` means the page's html was too large to process; it is terminal, so don't run the same command again. `zero_data_retention_not_enabled` means the flag isn't turned on for your organization; nothing was billed, and running it again won't help — drop `--zero-data-retention` or email sales@crawlbrulee.com. `target_unreachable` means we could not reach the site at all — nothing was billed; run it again after a pause, and if it keeps failing, check the url and whether the site is up. a `404` page is not an error at all — see above. out of credits or hitting concurrency? check `crawlbrulee usage`. a `service_unavailable` is a 503 on our side rather than a key problem — wait a moment and run the same command again, don't re-login or rotate the key. the full error reference is in **crawlbrulee-api**.
 
 ## see also
 

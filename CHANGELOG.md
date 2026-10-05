@@ -4,7 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
-## unreleased
+## 1.2.0 (2026-10-05)
+
+### added
+
+- **zero data retention.** a new request option, `zero_data_retention`, on scrape, async scrape and map, with `zero_data_retention_credit_cost` in `response_meta.usage` (the total now includes it) and a `403` `zero_data_retention_not_enabled` error. it keeps the result out of the shared cache and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). covered in `crawlbrulee-api`, `crawlbrulee-scrape`, `crawlbrulee-scrape-async`, `crawlbrulee-map`, `crawlbrulee-screenshots`, and the overview in `crawlbrulee`.
+- **client names.** `zero_data_retention` and `ZeroDataRetentionNotEnabledError` in the js and python sdks (1.2.0), the `zero_data_retention` tool input in the mcp (1.2.0), and the `--zero-data-retention` flag in the cli (5.2.0).
 
 ### changed
 

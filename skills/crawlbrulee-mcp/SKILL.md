@@ -72,11 +72,14 @@ only `url` is required. a bare call returns metadata + cleaned html — **markdo
   "proxy": "auto",
   "cleanup": { "ads_and_popups": true, "exclude_selectors": ["nav", "footer"] },
   "cache": { "max_age": 3600 },
-  "location": { "locale": "en-US", "country": "US" }
+  "location": { "locale": "en-US", "country": "US" },
+  "zero_data_retention": false // true keeps the result out of the shared cache, +1 credit — see below
 }
 ```
 
-`proxy` defaults to `auto` (starts basic, escalates to advanced on failure). screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage`, so the agent can see per-call cost without calling `usage`: `total_credit_cost` is what the call cost, and `engine_credit_cost`, `proxy_multiplier` and `screenshot_slicing_credit_cost` are the parts that make it up. `credits` and `screenshot_slices` are deprecated copies of `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version; older responses may only carry those, so fall back to them when the new names are missing. use `engine: "cache"` to identify a cache hit.
+`proxy` defaults to `auto` (starts basic, escalates to advanced on failure). screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage`, so the agent can see per-call cost without calling `usage`: `total_credit_cost` is what the call cost, and `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost` are the parts that make it up. `credits` and `screenshot_slices` are deprecated copies of `total_credit_cost` and `screenshot_slicing_credit_cost`, and will be removed in a future version; older responses may only carry those, so fall back to them when the new names are missing. use `engine: "cache"` to identify a cache hit.
+
+**`zero_data_retention: true`** (on `scrape`, `scrape_async` and `map`; needs `@crawlbrulee/mcp` `1.2.0` or newer) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). only send it when the user asks for it.
 
 **check `page_status_code` before you use the content.** a page the site really served is a normal `scrape` result, not a tool error — a `404`, `410` or `503` page comes back with its content, and the site's status is in `page_status_code` at the top level. the markdown of a `404` page is the site's "not found" text; tell the user the page answered `404` instead of treating that text as the page. `5xx` pages are never billed, and neither are `403`, `407`, `408`, `429` or `451` pages — see **crawlbrulee-api**. if a result has no `page_status_code`, it came from before the field existed, and the page was served normally.
 
@@ -110,11 +113,12 @@ with a `webhook` attached we deliver a single signed `scrape.complete` `POST` wh
   "types": { "internal": true, "external": false, "internal_subdomains": true },
   "max_urls": 5000, // collection ceiling — default 5000, max 100000
   "page": 1,
-  "limit": 1000 // page size — default 5000, max 10000
+  "limit": 1000, // page size — default 5000, max 10000
+  "zero_data_retention": false // true keeps the result out of the shared cache, +1 credit
 }
 ```
 
-use it to plan which pages to scrape — there's no crawl tool, so a crawl is map plus repeated `scrape`. the response's `response_meta` carries `pagination`, `truncation`, and map usage (`total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `engine`, `proxy`, and the deprecated `credits`; nothing for screenshots). map has no `page_status_code`: a map that found urls is a normal result even if the home page was a `404`, and a site that answered only with statuses we don't bill (a `5xx`, for example), or not at all, gives an empty list that costs 0. map `engine` is `http` or `cache`, and its resolved `proxy` is `basic` or `advanced` (never `auto`).
+use it to plan which pages to scrape — there's no crawl tool, so a crawl is map plus repeated `scrape`. the response's `response_meta` carries `pagination`, `truncation`, and map usage (`total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`, and the deprecated `credits`; nothing for screenshots). map has no `page_status_code`: a map that found urls is a normal result even if the home page was a `404`, and a site that answered only with statuses we don't bill (a `5xx`, for example), or not at all, gives an empty list that costs 0. map `engine` is `http` or `cache`, and its resolved `proxy` is `basic` or `advanced` (never `auto`).
 
 **check `response_meta.truncation` before you treat the list as the whole site.** `limit` only trims this response — page for the rest. `max_urls` is different: discovery *stops* there, so a big site comes back as exactly 5000 links with `response_capped: false`, which looks complete and isn't. the honest signal is `discovery_capped: true` plus `discovery_cap_reason`:
 
@@ -143,7 +147,7 @@ branch on the code. the set is the api's own error names (see **crawlbrulee-api*
 | `crawlbrulee_error` | an api error without a typed name |
 | `internal_error` | a bug in this mcp — please open an issue |
 
-the ones worth handling: `too_many_requests` (back off), `usage_allocation_error` (out of credits or concurrency — show the user `usage`), `antibot_blocked` (the target's bot protection blocked the request — don't retry automatically), `too_many_redirects` (the target redirected in a loop — same, don't retry automatically), `page_too_large` (the page's html was too large to process — terminal, never retry it), `target_unreachable` (HTTP 502 — we could not reach the site at all, and it isn't billed; retry once after a pause, then check the url with the user), `request_timeout` (safe to retry), `service_unavailable` (a 503 from our side — back off and retry; the key is fine, don't prompt the user for a new one).
+the ones worth handling: `zero_data_retention_not_enabled` (HTTP 403 — the organization doesn't have zero data retention; not billed, don't retry, send the request without the flag or point the user to sales@crawlbrulee.com), `too_many_requests` (back off), `usage_allocation_error` (out of credits or concurrency — show the user `usage`), `antibot_blocked` (the target's bot protection blocked the request — don't retry automatically), `too_many_redirects` (the target redirected in a loop — same, don't retry automatically), `page_too_large` (the page's html was too large to process — terminal, never retry it), `target_unreachable` (HTTP 502 — we could not reach the site at all, and it isn't billed; retry once after a pause, then check the url with the user), `request_timeout` (safe to retry), `service_unavailable` (a 503 from our side — back off and retry; the key is fine, don't prompt the user for a new one).
 
 from mcp `1.1.0`, a `target_unreachable` error adds a short next step after the message; the `[target_unreachable]` prefix is the same, so branch on that. a `404` page is not in this list — it is a normal result with `page_status_code: 404`.
 

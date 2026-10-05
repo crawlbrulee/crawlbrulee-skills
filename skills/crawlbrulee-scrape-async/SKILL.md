@@ -49,7 +49,9 @@ curl -s https://api.crawlbrulee.com/api/scrape/result/683a1f2b4c5d6e7f8a9b0c1d \
 - **`failed` means no page came back** — for example the site could not be reached, bot protection blocked us, or the page was too large. `error` explains what went wrong. a failed job is not billed.
 - **`result` errors if the job isn't finished** — poll `status` first. it also `404`s for an unknown job, or one whose result has aged out.
 
-results don't live forever; see [async scrape](https://crawlbrulee.com/docs/scrape/async) for the current retention window. poll on a sensible interval — a couple of seconds is plenty. every client ships a helper that wraps this loop (`waitForScrape` / `wait_for_scrape` / `crawlbrulee scrape wait`), so prefer that over hand-rolling it.
+results don't live forever; see [async scrape](https://crawlbrulee.com/docs/scrape/async) for the current retention window.
+
+**`zero_data_retention: true`** works on a job too (see **crawlbrulee-api**): the result is kept for 24 hours, then deleted, so fetch it inside that window. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). poll on a sensible interval — a couple of seconds is plenty. every client ships a helper that wraps this loop (`waitForScrape` / `wait_for_scrape` / `crawlbrulee scrape wait`), so prefer that over hand-rolling it.
 
 ## webhooks: get called instead of polling
 
@@ -89,7 +91,8 @@ the destination is per job; the **signing secret is per organization** and confi
     "metadata": { "order": "abc", "attempt": 2 },
     "response_meta": {
       "usage": {
-        "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1, "screenshot_slicing_credit_cost": 0,
+        "total_credit_cost": 1, "engine_credit_cost": 1, "proxy_multiplier": 1,
+        "screenshot_slicing_credit_cost": 0, "zero_data_retention_credit_cost": 0,
         "engine": "http", "proxy": "basic",
         "credits": 1, "screenshot_slices": 0   // deprecated names, same values
       }
