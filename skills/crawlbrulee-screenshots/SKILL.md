@@ -89,10 +89,10 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 ```jsonc
 {
   "screenshot": {
-    "url": "https://cdn.crawlbrulee.com/screenshots/abc123.webp",
+    "url": "https://cdn.crawlbrulee.com/scrape_assets/media/images/abc123/screenshot.webp?token=HS256-…&expires=1791374400",
     "type": "full_page",
     "properties": {
-      "file_name": "abc123.webp",
+      "file_name": "screenshot.webp",
       "mime": "image/webp",
       "width": 1920,
       "height": 8400,
@@ -101,7 +101,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
     "slices": [
       {
         "row_nr": 0,
-        "url": "https://cdn.crawlbrulee.com/screenshots/abc123_slice_0.webp",
+        "url": "https://cdn.crawlbrulee.com/scrape_assets/media/images/abc123/screenshot_slice_0.webp?token=HS256-…&expires=1791374400",
         "type": "slice",
         "properties": { /* file_name, mime, width, height, viewport */ }
       }
@@ -110,7 +110,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 }
 ```
 
-- **the image is at a plain url on our cdn** — fetch it with an ordinary `GET`, no auth header needed. it stays retrievable for a while rather than forever; see the docs for the current window, and download promptly if you need to keep it.
+- **the image is at a signed url on our cdn** — fetch it with an ordinary `GET`, no auth header needed; the signature is in the query string. the link expires 24 hours after the scrape (for an async scrape, 24 hours after the job was submitted; fetching the result again doesn't extend it), and screenshots aren't publicly accessible otherwise. download the image and keep the file, not the link.
 - **`mime` is `image/webp`**, or `image/jpeg` for captures too tall for webp's format limit. it is never png — don't infer the format from the file extension, read `properties.mime`.
 - **`slices[]` is only present when you asked for a `slice` action** — and asking doesn't guarantee it. in rare cases the capture is too large to slice, and we hand back the main image with no `slices` rather than failing the call. check the array is there before you read it. `row_nr` is zero-based and ordered top to bottom.
 - **`properties.height`** is the real captured height, which for a long page can be very large.

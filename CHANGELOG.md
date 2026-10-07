@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.2.1 (2026-10-07)
+
+### changed
+
+- **screenshot links expire.** `crawlbrulee-screenshots` says the image url is signed and expires 24 hours after the scrape (for an async scrape, 24 hours after submit), with signed links in the example. `crawlbrulee-scrape-async` says a job answers for 24 hours after submit, then `404`. the `not_found` rows in `crawlbrulee-api` and both sdk skills say the same.
+
 ## 1.2.0 (2026-10-05)
 
 ### added

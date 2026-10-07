@@ -47,9 +47,9 @@ curl -s https://api.crawlbrulee.com/api/scrape/result/683a1f2b4c5d6e7f8a9b0c1d \
 - once `done`, the **status** body also carries `response_meta.usage` — so you can see what a job charged without fetching the whole result. read `total_credit_cost` (see **crawlbrulee-api**).
 - **`done` means a page came back — not that the page was good.** a job whose page was a `404` or `503` ends `done`, and its result carries `page_status_code`. check that field on the result before you trust the content, exactly as for a sync scrape.
 - **`failed` means no page came back** — for example the site could not be reached, bot protection blocked us, or the page was too large. `error` explains what went wrong. a failed job is not billed.
-- **`result` errors if the job isn't finished** — poll `status` first. it also `404`s for an unknown job, or one whose result has aged out.
+- **`result` errors if the job isn't finished** — poll `status` first. it also `404`s for an unknown job, or one submitted more than 24 hours ago.
 
-results don't live forever; see [async scrape](https://crawlbrulee.com/docs/scrape/async) for the current retention window.
+**a job answers for 24 hours after you submit it.** after that `status` and `result` return `404` `not_found`, the same as an unknown job, and screenshot links in the result expire at the same moment, however late you fetch it. download what you need when you get the result. see [async scrape](https://crawlbrulee.com/docs/scrape/async).
 
 **`zero_data_retention: true`** works on a job too (see **crawlbrulee-api**): the result is kept for 24 hours, then deleted, so fetch it inside that window. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). poll on a sensible interval — a couple of seconds is plenty. every client ships a helper that wraps this loop (`waitForScrape` / `wait_for_scrape` / `crawlbrulee scrape wait`), so prefer that over hand-rolling it.
 

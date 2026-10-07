@@ -185,7 +185,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `invalid_credentials` | missing, expired, or revoked api key — a genuine key problem, not a transient one (see `service_unavailable`) |
 | `access_denied` | the token can't reach this resource |
 | `zero_data_retention_not_enabled` | HTTP 403 — you sent `zero_data_retention: true` but it is not enabled for your organization. not billed; send the request without it |
-| `not_found` | unknown async job id, or a result that has aged out |
+| `not_found` | unknown async job id, or a job submitted more than 24 hours ago |
 | `too_many_requests` | you're going too fast, or the target site rate-limited us — back off, honoring `details.retry_after_ms` when it is there, and space out requests to that site |
 | `usage_allocation_error` | credit or concurrency cap — `details.reason` says which (`credit_limit`, `concurrency_limit`, `duplicate_reservation`, `internal_error`) |
 | `antibot_blocked` | the target's bot protection blocked us — verify your use is permitted and don't retry automatically |

@@ -188,7 +188,7 @@ every failure subclasses `CrawlbruleeError`, which carries `status`, `error_name
 | `RateLimitError` | 429 — exposes `retry_after_ms`, `limited_by` |
 | `UsageAllocationError` | credit or concurrency cap — exposes `reason`, `usage` |
 | `ValidationError` | bad request (`invalid_url`, `url_too_long`, `blocked_url`, …) |
-| `NotFoundError` | 404 (e.g. an unknown or aged-out job id) |
+| `NotFoundError` | 404 (e.g. an unknown job id, or one submitted more than 24 hours ago) |
 | `ServiceUnavailableError` | 503 — we're briefly unavailable; retryable, and never a reason to rotate the key |
 | `TransportError` | network failure, timeout, non-json response |
 | `CrawlbruleeError` | base class for anything else |
