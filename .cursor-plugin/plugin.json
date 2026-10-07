@@ -1,6 +1,6 @@
 {
   "name": "crawlbrulee",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, processed fully in the EU.",
   "author": {
     "name": "crawlbrulee"
