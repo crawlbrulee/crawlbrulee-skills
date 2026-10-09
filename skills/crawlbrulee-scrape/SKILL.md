@@ -56,7 +56,7 @@ for a background job instead of a blocking call, the body is identical — see *
 | field | default | what you get |
 | --- | --- | --- |
 | `metadata` | **`true`** | the parsed `<head>` block — title, description, og/twitter tags, favicon |
-| `cleaned_html` | **`true`** | main-content html, page furniture removed |
+| `cleaned_html` | **`true`** | the page body with scripts, styles, ads and cookie banners removed |
 | `markdown` | `false` | clean markdown — the usual choice for llm/rag ingestion |
 | `raw_html` | `false` | the unprocessed document |
 | `links` | `false` | the links on the page, up to a per-page cap |
