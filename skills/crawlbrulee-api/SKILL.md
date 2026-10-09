@@ -151,10 +151,10 @@ things worth knowing about the cache key:
 - **every other query param is part of the key.** `?lang=en` and `?lang=fr` are separate entries — strip params you don't need before you send the url.
 - **screenshot settings are part of the key** — a different capture type, viewport, or device mode is a different entry.
 - **`location.locale` is part of the key** (`location.country` is not) — a `de-DE` request never serves from an `en-US` entry.
-- **`extract` is NOT part of the key.** adding or dropping an output field (say `raw_html`) on an otherwise identical request still matches the same entry.
+- **`extract` is NOT part of the key.** adding or dropping an output field (say `raw_html`) on an otherwise identical request still matches the same entry. `extract.elements` too: a cache hit reads your selectors from the cached page, and still costs 0.
 - **`require_js: true` only matches entries that were rendered with JavaScript.**
-- **`cleanup.exclude_selectors` disables caching** for that request. `cleanup.ads_and_popups` does not — it is part of the key instead, so both settings stay cacheable.
-- a screenshot with a non-zero `actions_before` wait or scroll disables caching too.
+- **`cleanup` is part of the key**, so `ads_and_popups` and `exclude_selectors` both stay cacheable. requests with the same removals share an entry; different ones don't.
+- a screenshot with a non-zero `actions_before` wait or scroll disables caching.
 
 ## account
 
@@ -181,7 +181,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `name` | what to do |
 | --- | --- |
 | `invalid_url`, `url_too_long`, `unsupported_url_schema`, `url_credentials_not_supported`, `blocked_url` | the url was rejected before we fetched it — fix the input. `blocked_url` also comes back when the site redirected to an address we don't fetch — retrying won't help |
-| `validation_error` | the request body failed validation |
+| `validation_error` | the request body failed validation — this includes an invalid css selector, or too many selectors, in `extract.elements` |
 | `invalid_credentials` | missing, expired, or revoked api key — a genuine key problem, not a transient one (see `service_unavailable`) |
 | `access_denied` | the token can't reach this resource |
 | `zero_data_retention_not_enabled` | HTTP 403 — you sent `zero_data_retention: true` but it is not enabled for your organization. not billed; send the request without it |

@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-mcp
-description: use when an mcp-aware agent or editor should scrape pages, map sites, run background scrape jobs, or check crawlbrulee credits as native tool calls. covers installing the `@crawlbrulee/mcp` stdio server and its seven tools.
+description: use when an mcp-aware agent or editor should scrape pages (or pull named values out of them by css selector), map sites, run background scrape jobs, or check crawlbrulee credits as native tool calls. covers installing the `@crawlbrulee/mcp` stdio server and its seven tools.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -82,6 +82,31 @@ only `url` is required. a bare call returns metadata + cleaned html — **markdo
 **`zero_data_retention: true`** (on `scrape`, `scrape_async` and `map`; needs `@crawlbrulee/mcp` `1.2.0` or newer) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). only send it when the user asks for it.
 
 **check `page_status_code` before you use the content.** a page the site really served is a normal `scrape` result, not a tool error — a `404`, `410` or `503` page comes back with its content, and the site's status is in `page_status_code` at the top level. the markdown of a `404` page is the site's "not found" text; tell the user the page answered `404` instead of treating that text as the page. `5xx` pages are never billed, and neither are `403`, `407`, `408`, `429` or `451` pages — see **crawlbrulee-api**. if a result has no `page_status_code`, it came from before the field existed, and the page was served normally.
+
+**need a few values, not the whole page?** name them by css selector in `extract.elements` and the result has just those, as json, under a top-level `elements` (needs `@crawlbrulee/mcp` `1.3.0` or newer). far less for the agent to read than the markdown, and no extra credits:
+
+```jsonc
+{
+  "url": "https://books.toscrape.com/",
+  "extract": {
+    "cleaned_html": false, "metadata": false,
+    "elements": {
+      "heading": "h1",
+      "books": {
+        "selector": "article.product_pod",
+        "all": true,
+        "fields": {
+          "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" },
+          "price": ".price_color"
+        }
+      }
+    }
+  }
+}
+// → "elements": { "heading": "All products", "books": [{ "title": "A Light in the Attic", "price": "£51.77" }, …] }
+```
+
+`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [elements](https://crawlbrulee.com/docs/scrape/elements).
 
 see **crawlbrulee-scrape** and **crawlbrulee-screenshots** for what the fields mean.
 

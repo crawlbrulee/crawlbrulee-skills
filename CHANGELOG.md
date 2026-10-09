@@ -4,6 +4,24 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.0 (2026-10-09)
+
+### added
+
+- **`extract.elements`.** a new scrape option that picks named values out of a page by css selector and returns them as json in a top-level `elements` field — a title, a price, the next-page link, or one object per product card with `fields`. it costs no extra credits, also on a cache hit. the skills teach when to reach for it (you need specific values, not the whole page), with a short example. see [elements](https://crawlbrulee.com/docs/scrape/elements). covered in `crawlbrulee-scrape` (with the new `elements_truncated` warning and `elements` in `unsupported_fields`), `crawlbrulee-scrape-async`, `crawlbrulee-api`, and the overview in `crawlbrulee`. the readme shows a short example.
+- **client names.** `extract.elements` and `elements` on the result in the js and python sdks (1.3.0), the same input on the `scrape` and `scrape_async` tools in the mcp (1.3.0), and the `--element <name=selector>` and `--elements <json>` flags in the cli (5.3.0).
+- on a json, plain-text, xml or markdown page, `elements` comes back in `unsupported_fields`. a pdf or an image is a `415` `unsupported_content`.
+- in the cli, `--element` / `--elements` on their own return only the elements (plus metadata unless `--no-metadata`). add `-m` or another content flag to get the page too.
+- **the `screenshot_unavailable` warning.** a screenshot was asked for, but the page came back from the `http` engine without one. added to the warning table in `crawlbrulee-scrape` and to `crawlbrulee-screenshots`.
+- `crawlbrulee-scrape` notes that the `metadata_truncated` warning is retired and no longer sent. it can still show up on results stored before it was retired.
+
+### changed
+
+- `cleanup.exclude_selectors` no longer turns the cache off. it is part of the cache key, so requests with the same removals share a cache entry. updated in `crawlbrulee-scrape` and `crawlbrulee-api`.
+- the overview no longer says there is no structured extraction: you get any values you name by css selector. there is still no llm extraction.
+- the plugin listings mention that you can get just the values you name by css selector.
+- "what crawlbrulee does not do" in the overview now ends with a note: if you need one of those features, email contact@crawlbrulee.com, and we might build it.
+
 ## 1.2.1 (2026-10-07)
 
 ### changed

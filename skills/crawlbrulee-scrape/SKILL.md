@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-scrape
-description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata. covers every extract format and which are on by default, js rendering, excluding page furniture, cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
+description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector. covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -43,7 +43,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 
 `max_age` is the only cache field — `cache` rejects anything else.
 
-**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html`) still matches the same entry.
+**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry.
 
 **`zero_data_retention: true`** goes at the top level of the body, not inside `cache`. keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
@@ -62,12 +62,71 @@ for a background job instead of a blocking call, the body is identical — see *
 | `links` | `false` | the links on the page, up to a per-page cap |
 | `images` | `false` | inline images, up to a per-page cap |
 | `screenshot` | `false` | a capture — see **crawlbrulee-screenshots** |
+| `elements` | — | named values picked out by css selector, as json — see [below](#pulling-specific-values-elements) |
 
 naming any format does **not** switch the defaults off — `extract: { markdown: true }` gives you markdown *plus* metadata and cleaned html. set a default to `false` explicitly to drop it:
 
 ```jsonc
 "extract": { "markdown": true, "cleaned_html": false, "metadata": false }   // markdown only
 ```
+
+## pulling specific values: `elements`
+
+when you need a few values from a page — a price, a title, the next-page link, every product in a list, a table's rows — ask for them by css selector instead of reading the whole page. `extract.elements` gives back clean json under names you pick. that is far less for you to read than the markdown, and it costs **no extra credits**, also on a cache hit.
+
+each key is a name you choose. the value is either a selector string (you get the text of the first match) or an object:
+
+| key | what it does |
+| --- | --- |
+| `selector` | required. a standard css selector, `:not()` and `:has()` included |
+| `output` | `text` (default), `html` (the outer html) or `attribute` |
+| `attribute` | the attribute to read when `output` is `attribute`. `href` and `src` come back as full urls |
+| `all` | `true` returns every match as a list, not just the first |
+| `fields` | use instead of `output`: name → selector (or object), read **inside each match**. one object per match; nests up to 3 levels |
+
+```jsonc
+"extract": {
+  "cleaned_html": false, "metadata": false,   // skip the defaults, keep just the values
+  "elements": {
+    "heading": "h1",
+    "books": {
+      "selector": "article.product_pod",
+      "all": true,
+      "fields": {
+        "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" },
+        "price": ".price_color",
+        "url": { "selector": "h3 a", "output": "attribute", "attribute": "href" }
+      }
+    },
+    "next_page": { "selector": "li.next a", "output": "attribute", "attribute": "href" }
+  }
+}
+```
+
+the result has a top-level `elements` with the same names:
+
+```jsonc
+"elements": {
+  "heading": "All products",
+  "books": [
+    { "title": "A Light in the Attic", "price": "£51.77", "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html" },
+    { "title": "Tipping the Velvet", "price": "£53.74", "url": "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html" }
+    // … one object per book
+  ],
+  "next_page": "https://books.toscrape.com/catalogue/page-2.html"
+}
+```
+
+- **use `fields` for a list of records.** fields look only inside each match, so a card's title, price and url stay together. for the same reason a field selector that starts with `+` or `~` matches nothing, and a field can't read the matched element itself: an attribute on the `<article>` you matched comes back `null`, so match one level higher instead. two separate `all: true` lists can differ in length (a match without the attribute is left out), so don't pair them up by position.
+- **every name you asked for is always there**, at every level. no match is `null`, or `[]` with `all: true`.
+- values are read **after `cleanup`**, from the same page as `links` and `images`. if they render client-side, add `require_js: true`.
+- `<script>` and `<style>` can't be selected, so JSON-LD and inline script data are out of reach — ask for `raw_html` for those.
+- tables are read the way a browser reads them, so `table > tbody > tr` works even when the page's html leaves out `<tbody>`.
+- an invalid selector (a pseudo-element like `p::before` too) or too many selectors is a `400` `validation_error`, not billed.
+- a list stops at 1,000 matches, and a request has limits on matches and size. when a value hits one, `warnings` has `elements_truncated`.
+- not an html page (json, plain text, xml or markdown)? `elements` comes back in `unsupported_fields`. a pdf or an image is a `415` `unsupported_content` instead.
+
+the full rules and limits are in the docs: [elements](https://crawlbrulee.com/docs/scrape/elements).
 
 ## trimming the page
 
@@ -88,7 +147,7 @@ three things to know:
 
 - it shapes `markdown`, `cleaned_html`, `links`, `images` and the screenshot.
 - it **never** touches `raw_html`. that is always the page as it arrived, before anything was removed — so you can always get back what we started from.
-- `exclude_selectors` **disables caching** for that request, so every such call is a fresh fetch. `ads_and_popups` does not: both settings stay cacheable.
+- both settings are part of the cache key, so both stay cacheable. requests with the same `exclude_selectors` share a cache entry; different ones don't.
 
 ## the response
 
@@ -107,6 +166,7 @@ fields you didn't request are simply absent.
   "images": [{ "url": "https://example.com/a.png?v=2", "alt": "…" }],
   "screenshot": { /* see crawlbrulee-screenshots */ },
   "metadata": { "title": "…", "description": "…", "og_title": "…", "favicon_url": "…" },
+  "elements": { "heading": "All products", "books": [ /* … */ ] },  // only if you asked for elements
   "unsupported_fields": [],
   "warnings": [],
   "response_meta": {
@@ -130,7 +190,7 @@ fields you didn't request are simply absent.
 
 ### `unsupported_fields`
 
-if you request a format that doesn't apply to the content type — markdown of a pdf, say — that field name comes back in `unsupported_fields` and the rest of your payload is delivered normally. it's not an error; check the array rather than assuming every requested field arrived.
+if you request a format that doesn't apply to the content type — `metadata` of a json file, say, or `elements` on a json, plain-text, xml or markdown page — that field name comes back in `unsupported_fields` and the rest of your payload is delivered normally. it's not an error; check the array rather than assuming every requested field arrived.
 
 ### `warnings`
 
@@ -142,8 +202,9 @@ stable string codes for things worth flagging on an otherwise successful scrape.
 | `links_truncated` | the page had more links than we return for one page |
 | `inline_images_truncated` | the page had more inline images than we return for one page |
 | `raw_html_truncated` | the document was larger than the `raw_html` budget |
+| `elements_truncated` | an `elements` value hit a limit: a list was cut at 1,000 matches, or the request reached its match or size limit (a value that didn't fit is `null`, never cut short) |
 
-every one of them means you still got the output, cut at the ceiling — never a silent trim. the current ceilings live in the [docs](https://crawlbrulee.com/docs/scrape).
+every one of them means you still got the output, cut at the ceiling — never a silent trim (an `elements` value too big to fit is the one exception: it comes back `null`). the current ceilings live in the [docs](https://crawlbrulee.com/docs/scrape).
 
 a second family means that section's extraction failed, so the field came back omitted or empty while the rest of the scrape succeeded:
 
@@ -152,10 +213,11 @@ a second family means that section's extraction failed, so the field came back o
 | `links_unavailable` | link extraction failed — `links` is omitted or empty |
 | `inline_images_unavailable` | image extraction failed — `images` is omitted or empty |
 | `metadata_unavailable` | metadata extraction failed — `metadata` is omitted or empty |
+| `screenshot_unavailable` | a screenshot was asked for, but the page came back from the `http` engine without one — `screenshot` is omitted |
 
 **an empty field carrying one of these does not mean the page had none.** that's the whole point of the code — it separates "we couldn't read them" from "there weren't any". don't report the absence as a finding; re-run the scrape. an empty field with no such warning is a real absence.
 
-cache hits and async result fetches carry their warnings too.
+cache hits and async result fetches carry their warnings too. `metadata_truncated` is retired and no longer sent; it can still show up on results stored before it was retired.
 
 ## when a page comes back empty or a request fails
 

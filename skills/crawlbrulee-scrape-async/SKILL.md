@@ -51,6 +51,8 @@ curl -s https://api.crawlbrulee.com/api/scrape/result/683a1f2b4c5d6e7f8a9b0c1d \
 
 **a job answers for 24 hours after you submit it.** after that `status` and `result` return `404` `not_found`, the same as an unknown job, and screenshot links in the result expire at the same moment, however late you fetch it. download what you need when you get the result. see [async scrape](https://crawlbrulee.com/docs/scrape/async).
 
+**`extract.elements` works on a job too.** put it in the submit body as for a sync scrape; the result carries `elements` for the same 24 hours as the rest of the result. it is a good fit for a batch where you only need a few values per page, such as a price and a title — no extra credits. see **crawlbrulee-scrape**.
+
 **`zero_data_retention: true`** works on a job too (see **crawlbrulee-api**): the result is kept for 24 hours, then deleted, so fetch it inside that window. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). poll on a sensible interval — a couple of seconds is plenty. every client ships a helper that wraps this loop (`waitForScrape` / `wait_for_scrape` / `crawlbrulee scrape wait`), so prefer that over hand-rolling it.
 
 ## webhooks: get called instead of polling
@@ -100,7 +102,7 @@ the destination is per job; the **signing secret is per organization** and confi
 }
 ```
 
-**the delivery is a pointer, not the content** — it never carries the scraped page. read `data.job_id` and fetch the result from `GET /api/scrape/result/{job_id}`.
+**the delivery is a pointer, not the content** — it never carries the scraped page, and no `elements` either. read `data.job_id` and fetch the result from `GET /api/scrape/result/{job_id}`.
 
 **`data.status` uses a different vocabulary from job status: `success` | `failed` | `cancelled`** — not `done`. this trips people up. `page_status_code` and `response_meta` are present only on `success`; `error` only on `failed`.
 

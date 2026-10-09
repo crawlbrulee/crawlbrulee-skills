@@ -9,7 +9,7 @@ metadata:
 
 # 🍮 crawlbrulee
 
-crawlbrulee is a web-scraping api. you send a url, you get back clean structured data — markdown, cleaned html, raw html, the page's links and images, a screenshot, and page metadata. you can also enumerate the urls on a site (a "link map"). it's hosted in the EU and built for ai pipelines and agents.
+crawlbrulee is a web-scraping api. you send a url, you get back clean structured data — markdown, cleaned html, raw html, the page's links and images, a screenshot, page metadata, and any values you name with css selectors. you can also enumerate the urls on a site (a "link map"). it's hosted in the EU and built for ai pipelines and agents.
 
 this skill gets you authenticated and pointed at the right interface. the deep dives live in their own skills.
 
@@ -17,7 +17,7 @@ this skill gets you authenticated and pointed at the right interface. the deep d
 
 | capability | what you get | skill |
 | --- | --- | --- |
-| **scrape** | fetch one url → markdown / cleaned html / raw html / links / images / screenshot / metadata | **crawlbrulee-scrape** |
+| **scrape** | fetch one url → markdown / cleaned html / raw html / links / images / screenshot / metadata, or just the values you name by css selector (`elements`) | **crawlbrulee-scrape** |
 | **screenshots** | viewport or full-page captures, desktop or mobile, tall pages sliced into tiles | **crawlbrulee-screenshots** |
 | **async scrape** | submit a scrape as a background job; poll it, or get a webhook when it's done | **crawlbrulee-scrape-async** |
 | **map** | discover the urls on a site (sitemap + homepage links, deduped, paginated) | **crawlbrulee-map** |
@@ -29,8 +29,10 @@ don't reach for capabilities that aren't there — build them from the primitive
 
 - **no crawl endpoint.** to "crawl" a site, compose **map** (discover urls) → **scrape** (fetch each one). filter the url list yourself and cap how many pages you scrape.
 - **no web search.** crawlbrulee scrapes urls you already have; it does not find pages by query.
-- **no llm or structured-data extraction endpoint.** you get markdown, html, and metadata back; run your own extraction on top.
+- **no llm extraction.** you get markdown, html, metadata, and the values you name with css selectors (`extract.elements`). there's no "find the price on this page" prompt — when a value can't be reached with a selector, run your own extraction on the markdown.
 - **no browser session.** no clicking, form filling, or multi-step flows. `require_js` renders JavaScript, and screenshots support a few scripted scroll/wait actions, but there's nothing interactive.
+
+> **need one of these?** tell us. email **contact@crawlbrulee.com** with what you're trying to do and which of these would help — a crawl endpoint, web search, llm extraction, browser sessions, or something else. we value your feedback, and we read every request - what people ask for shapes what we build next.
 
 ## set up auth (once)
 
@@ -91,6 +93,30 @@ print(page.markdown)
 for mcp, configure the server once (see **crawlbrulee-mcp**) and the agent calls the `scrape` tool directly.
 
 > heads up: a bare scrape returns `metadata` + `cleaned_html`. ask for `markdown`, `links`, `images`, `raw_html`, or `screenshot` explicitly. the cli is the exception — it defaults to markdown + metadata.
+
+## need a few values, not the whole page?
+
+name them with css selectors in `extract.elements` and you get just those back as json — prices, titles, links, one object per product card or table row. that is far less to read than the markdown, and it costs no extra credits:
+
+```jsonc
+"extract": {
+  "cleaned_html": false, "metadata": false,   // skip the defaults, keep just the values
+  "elements": {
+    "heading": "h1",
+    "books": {
+      "selector": "article.product_pod",
+      "all": true,
+      "fields": {
+        "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" },
+        "price": ".price_color"
+      }
+    }
+  }
+}
+// → "elements": { "heading": "All products", "books": [{ "title": "A Light in the Attic", "price": "£51.77" }, …] }
+```
+
+see **crawlbrulee-scrape** for how it works, and [elements](https://crawlbrulee.com/docs/scrape/elements) for the full rules.
 
 ## check the page's status
 

@@ -144,6 +144,35 @@ map `engine` is `http` or `cache`; its resolved `proxy` is `basic` or `advanced`
 `page_status_code`, the `*_credit_cost` fields, `proxy_multiplier` and `TargetUnreachableError`
 need `crawlbrulee` `1.1.0` or newer. on an older release, upgrade to see the page's status.
 
+**picking values with `elements`.** when you need a few values (prices, titles, links, a table's rows), name them by css selector in `extract`'s `elements` and read `page.elements` — clean json instead of the whole page, and no extra credits. the names are the api's own snake_case keys (needs `crawlbrulee` `1.3.0` or newer):
+
+```python
+page = client.scrape(
+    url="https://books.toscrape.com/",
+    extract=ScrapeExtract(
+        cleaned_html=False,
+        metadata=False,
+        elements={
+            "heading": "h1",
+            "books": {
+                "selector": "article.product_pod",
+                "all": True,
+                "fields": {
+                    "title": {"selector": "h3 a", "output": "attribute", "attribute": "title"},
+                    "price": ".price_color",
+                },
+            },
+        },
+    ),
+)
+books = page.elements["books"] if page.elements is not None else []
+if isinstance(books, list):   # `all: True` gives a list
+    for book in books[:2]:
+        print(book)           # {'title': 'A Light in the Attic', 'price': '£51.77'}
+```
+
+`page.elements` is `None` when you didn't ask for it. `fields` are read inside each match, so each card's values stay together. a name with no match is `None` (`[]` for a list). an invalid selector raises `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrape_async`. see **crawlbrulee-scrape** and [elements](https://crawlbrulee.com/docs/scrape/elements).
+
 **zero data retention.** `zero_data_retention=True` is accepted on `scrape`, `scrape_async` and `map`, sync and async clients alike; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call raises `ZeroDataRetentionNotEnabledError` (needs `crawlbrulee` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
 ## webhooks

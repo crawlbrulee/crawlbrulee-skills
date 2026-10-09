@@ -117,7 +117,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 
 ## tips
 
-- **check before you read.** when you requested other outputs alongside the screenshot, a failed capture just leaves the `screenshot` field absent — guard for it rather than assuming. a screenshot-only request that can't deliver errors instead, so there you handle the error, not a missing field.
+- **check before you read.** when you requested other outputs alongside the screenshot, a failed capture just leaves the `screenshot` field absent — guard for it rather than assuming. when the page came back without a capture, `warnings` has `screenshot_unavailable`. a screenshot-only request that can't deliver errors instead, so there you handle the error, not a missing field.
 - **check `page_status_code` too.** a page the site served with an error status is still a page, so you get a screenshot of it — a `404` page shoots like any other. look at the result's `page_status_code` before you treat the image as the page you wanted. see **crawlbrulee-scrape**.
 - **very long pages get capped.** we stop at a maximum capture height and flag it with a `screenshot_truncated` entry in the response's `warnings` array. if you see that code, the image and its slices stop at the cap.
 - **screenshot settings are part of the cache key.** the same url at a different capture type, viewport, or device mode is a different entry — changing any of them means a fresh fetch.

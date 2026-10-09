@@ -96,6 +96,32 @@ and a map has no `page_status_code`.
 are typed from `@crawlbrulee/sdk` `1.1.0`. an older release still returns the fields at runtime,
 but its types don't name them — upgrade rather than casting.
 
+**picking values with `elements`.** when you need a few values (prices, titles, links, a table's rows), name them by css selector in `extract.elements` and read `page.elements` — clean json instead of the whole page, and no extra credits. the request uses the api's snake_case names, like every other option (needs `@crawlbrulee/sdk` `1.3.0` or newer):
+
+```ts
+const page = await cb.scrape({
+  url: 'https://books.toscrape.com/',
+  extract: {
+    cleaned_html: false,
+    metadata: false,
+    elements: {
+      heading: 'h1',
+      books: {
+        selector: 'article.product_pod',
+        all: true,
+        fields: {
+          title: { selector: 'h3 a', output: 'attribute', attribute: 'title' },
+          price: '.price_color',
+        },
+      },
+    },
+  },
+})
+console.log(page.elements?.books) // [{ title: 'A Light in the Attic', price: '£51.77' }, …]
+```
+
+`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list). an invalid selector throws `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrapeAsync()`. see **crawlbrulee-scrape** and [elements](https://crawlbrulee.com/docs/scrape/elements).
+
 **zero data retention.** `zero_data_retention: true` is accepted on `scrape()`, `scrapeAsync()` and `map()`; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call throws `ZeroDataRetentionNotEnabledError` (needs `@crawlbrulee/sdk` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
 ## background jobs

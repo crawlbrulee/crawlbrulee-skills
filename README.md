@@ -40,6 +40,26 @@ drop these into any skills-aware coding agent (Claude Code, Cursor, Codex, Gemin
 
 each skill lives in `skills/<name>/SKILL.md` in the open Agent Skills format (`name` + `description` frontmatter).
 
+## just the values you need
+
+when an agent needs a few values from a page — prices, titles, links, a table's rows — the skills teach it to ask for them by css selector with `extract.elements` instead of reading the whole page. it costs no extra credits:
+
+```json
+{
+  "url": "https://books.toscrape.com/",
+  "extract": {
+    "cleaned_html": false,
+    "metadata": false,
+    "elements": {
+      "heading": "h1",
+      "books": { "selector": "article.product_pod", "all": true, "fields": { "price": ".price_color" } }
+    }
+  }
+}
+```
+
+the result carries `"elements": { "heading": "All products", "books": [{ "price": "£51.77" }, …] }`. selector rules and limits: [elements](https://crawlbrulee.com/docs/scrape/elements).
+
 ## install
 
 install with the [skills](https://www.skills.sh/) cli:

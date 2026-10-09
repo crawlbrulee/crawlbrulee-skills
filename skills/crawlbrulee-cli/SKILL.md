@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-cli
-description: use when driving crawlbrulee from a terminal or a shell script — the `crawlbrulee` / `npx crawlbrulee` command. covers scrape url, scrape status/result/wait, map, usage, whoami, login/logout/view-config, every flag, the screenshot shorthand, and text-vs-json output.
+description: use when driving crawlbrulee from a terminal or a shell script — the `crawlbrulee` / `npx crawlbrulee` command. covers scrape url, scrape status/result/wait, map, usage, whoami, login/logout/view-config, every flag, picking values by css selector (--element / --elements), the screenshot shorthand, and text-vs-json output.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -50,6 +50,8 @@ note the shape: **`scrape` is a command group, so scraping a url is `scrape url 
 | `--links` | `-l` | all links |
 | `--images` | `-i` | inline images |
 | `--screenshot` | `-ss` | capture a screenshot (syntax below) |
+| `--element <name=selector>` | | a named value by css selector, the text of the first match; repeatable (cli `5.3.0`+) |
+| `--elements <json>` | | named values in the full json form; `@path` reads a file (cli `5.3.0`+) |
 | `--all` | | every extract field at once |
 | `--no-metadata` | | drop page metadata |
 | `--require-js` | | render JavaScript |
@@ -73,6 +75,32 @@ crawlbrulee scrape url https://example.com --json | jq .response_meta.usage
 `--proxy` takes `basic`, `advanced`, or `auto` only. omit it and the server applies its default.
 
 `--zero-data-retention` (also on `scrape url --async` and on `map`) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). an older cli fails with `unknown option`; check `crawlbrulee --version`.
+
+### picking values: `--element` and `--elements`
+
+when you need a few values (a price, a title, every product on a list), name them by css selector and read them from `elements` in the json. far less to read than the markdown, and no extra credits.
+
+```bash
+# the text of the first match, one flag per name
+crawlbrulee scrape url https://books.toscrape.com --element heading=h1 --element price=.price_color --json | jq .elements
+
+# the full form: one object per product card, with fields read inside each card
+crawlbrulee scrape url https://books.toscrape.com --json --elements '{
+  "books": { "selector": "article.product_pod", "all": true,
+    "fields": { "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" }, "price": ".price_color" } }
+}' | jq '.elements.books[:2]'
+# → [{ "title": "A Light in the Attic", "price": "£51.77" }, { "title": "Tipping the Velvet", "price": "£53.74" }]
+
+crawlbrulee scrape url https://books.toscrape.com --elements @elements.json --json   # read the json from a file
+```
+
+- on their own, `--element` / `--elements` return only the elements (plus metadata unless `--no-metadata`); add `-m` or another content flag to get the page too.
+- `--element` splits on the **first** `=`, so `--element 'link=a[href="/cart"]'` works. always put single quotes around a selector that has anything beyond letters, digits, `.`, `#`, `-` or `_` — `--element 'item=li:not(.ad)'` — or the shell changes it before the cli sees it.
+- `--elements` takes the same json as `extract.elements` in the api — `selector`, `output`, `attribute`, `all`, `fields`. see **crawlbrulee-scrape**.
+- the two flags combine, and both work with `--async`.
+- each name may appear only once across both flags, `--elements` may be given only once, and `--elements '{}'` (an empty object) is refused, even next to `--element`.
+- a name with no match is `null` (`[]` for a list). an invalid selector fails with `validation_error`. when a value hits a limit, `warnings` has `elements_truncated`.
+- an older cli fails with `unknown option`; check `crawlbrulee --version`. full rules: [elements](https://crawlbrulee.com/docs/scrape/elements).
 
 ### screenshot shorthand (`-ss` / `--screenshot`)
 
@@ -188,6 +216,7 @@ check `usage` before a credit-heavy job.
 - terminal → **text**; piped, redirected, or `-o <file>` → **json**.
 - force it with `--json` or `--text`; `--compact` gives one-line json.
 - in text mode, a scrape prints a trailing `# usage: <n> credits · engine <engine> · proxy <tier> · slices <0|1>` comment — the same `response_meta.usage` you'd get in json. `<n>` is what the call cost (`total_credit_cost`). map prints the same comment without the slice field because map does not produce screenshots; its engine is `http` or `cache`, and its resolved proxy is `basic` or `advanced` (never `auto`). `engine cache` identifies a cache hit.
+- in text mode, elements print as an `elements: {…}` block, after the page body if you asked for one. when the page can't give some of what you asked for (say `--element` on a json url), a `# unsupported: <fields>` line names them, e.g. `# unsupported: elements`; the rest still prints.
 - in json, read `response_meta.usage.total_credit_cost` for the cost.
 - errors go to stderr as `error: <name> — <message>`.
 - exit code is `0` on success, `1` on any failure, so you can branch on it in scripts.
