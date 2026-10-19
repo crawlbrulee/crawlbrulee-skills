@@ -4,6 +4,13 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.1 (2026-10-19)
+
+### changed
+
+- the plugin now starts one exact version of the mcp server, `@crawlbrulee/mcp@1.3.2`, instead of the newest one on npm. plugin stores review the server a plugin runs, so each plugin release names the version it was tested with. to use a newer mcp server before the next plugin release, set it up by hand as shown in `crawlbrulee-mcp`.
+- shorter one-line description for the OpenAI plugin directory, which allows 30 characters.
+
 ## 1.3.0 (2026-10-09)
 
 ### added
