@@ -103,6 +103,14 @@ Grok Build reads Claude Code marketplaces and plugins as they are, so the `claud
 export CRAWLBRULEE_API_KEY=cwbl_...
 ```
 
+## what gets sent, and where
+
+- the mcp server, and the curl, cli and sdk examples in the skills, send your requests (the url and the options you pick) with your api key to the crawlbrulee api, `https://api.crawlbrulee.com`.
+- screenshots come back as signed links on `cdn.crawlbrulee.com` that expire 24 hours after the scrape.
+- the api runs on EU servers. we keep scrape, map and screenshot results only so caching works, and delete them no later than 90 days after they're created.
+
+[privacy policy](https://crawlbrulee.com/legal/privacy-policy) · [data processing agreement](https://crawlbrulee.com/legal/dpa)
+
 ## part of the crawlbrulee toolkit
 
 one api, many ways to call it:

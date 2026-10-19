@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.4 (2026-10-19)
+
+### added
+
+- the readme says what gets sent where: your requests go to `https://api.crawlbrulee.com`, screenshot links point to `cdn.crawlbrulee.com`, and results are deleted no later than 90 days after they're created. it links the privacy policy and the data processing agreement.
+
 ## 1.3.3 (2026-10-19)
 
 ### changed
