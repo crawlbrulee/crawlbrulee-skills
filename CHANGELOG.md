@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.6 (2026-10-19)
+
+### changed
+
+- the OpenAI plugin manifest follows OpenAI's directory rules: three starter prompts instead of five, the support, privacy and terms links, "GDPR" in capitals, and a brand color with enough contrast against white (`#E0B000`). other hosts are not affected.
+
 ## 1.3.5 (2026-10-19)
 
 ### added
