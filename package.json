@@ -1,0 +1,9 @@
+{
+  "name": "crawlbrulee-plugin",
+  "private": true,
+  "description": "runtime for the crawlbrulee plugin in Claude: the mcp server, installed from package-lock.json",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@crawlbrulee/mcp": "1.3.2"
+  }
+}
