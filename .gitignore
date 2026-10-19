@@ -1,6 +1,3 @@
-# a local install of the plugin runtime
-node_modules/
-
 # editor + os
 .idea/
 .DS_Store

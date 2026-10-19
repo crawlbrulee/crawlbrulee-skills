@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.3 (2026-10-19)
+
+### changed
+
+- every host, Claude included, starts the mcp server the same way again: `npx -y @crawlbrulee/mcp@1.3.2`. the plugin no longer ships a `package.json` or `package-lock.json`. in 1.3.2, hosts that read the Claude plugin files but don't install a lockfile could not start the server.
+
 ## 1.3.2 (2026-10-19)
 
 ### changed
