@@ -1,7 +1,7 @@
 {
   "name": "crawlbrulee",
   "displayName": "crawlbrulee",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, or just the values you name by CSS selector, processed fully in the EU.",
   "author": {
     "name": "crawlbrulee",
@@ -31,5 +31,9 @@
       "sensitive": true,
       "required": true
     }
-  }
+  },
+  "documentationUrl": "https://crawlbrulee.com/docs",
+  "supportUrl": "https://github.com/crawlbrulee/crawlbrulee-skills/issues",
+  "privacyPolicyUrl": "https://crawlbrulee.com/legal/privacy-policy",
+  "termsOfServiceUrl": "https://crawlbrulee.com/legal/terms-and-conditions"
 }

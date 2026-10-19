@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.5 (2026-10-19)
+
+### added
+
+- the Claude plugin manifest names the links for plugin directory listings: the docs home, support (this repo's issues), the privacy policy and the terms. hosts don't read these fields; nothing changes in how the plugin works.
+
 ## 1.3.4 (2026-10-19)
 
 ### added
