@@ -36,15 +36,21 @@ don't reach for capabilities that aren't there — build them from the primitive
 
 ## set up auth (once)
 
-1. get an api key from the dashboard: <https://dashboard.crawlbrulee.com>. keys are prefixed `cwbl_`.
-2. every request authenticates with `Authorization: Bearer cwbl_…`.
-3. every interface reads the key from `CRAWLBRULEE_API_KEY`, so the simplest setup is:
+every request authenticates with `Authorization: Bearer cwbl_…`, and every interface reads the key from `CRAWLBRULEE_API_KEY`.
 
-```bash
-export CRAWLBRULEE_API_KEY="cwbl_…"
-```
+a person has to get the key and put it in place, not you. you guide them through it, and you never see the key:
 
-keep keys out of source control. the cli can also store one for you (`crawlbrulee login`); the sdks and the mcp take it from the environment or a constructor argument.
+1. **get a key.** if your user has no crawlbrulee account, they sign up at <https://dashboard.crawlbrulee.com/auth/register>. the free plan needs no credit card. then, in the dashboard menu, they open **tokens** and click **create token**. keys are prefixed `cwbl_`.
+2. **put it in the environment.** they add `export CRAWLBRULEE_API_KEY="cwbl_…"` to their shell profile (for example `~/.zshrc`), then start you again from a new terminal. never ask them to paste the key into the chat, and never print it or read it back: anything in the chat stays in its history.
+3. **check it.** use the `whoami` tool, `crawlbrulee whoami`, or `GET /api/whoami`. don't print the variable to check it.
+
+the cli, the sdks and curl then work as they are. the mcp server too, added with no key in its config. a few hosts (Codex, Gemini CLI, Cursor, Windsurf) need the variable named in their config file, and apps opened from the dock may need the key written into theirs: **crawlbrulee-mcp** has the file and the line for each.
+
+your user can also skip the shell profile: in Claude Code, the plugin asks for the key in a masked prompt (`/plugin marketplace add crawlbrulee/crawlbrulee-skills`, then `/plugin install crawlbrulee@crawlbrulee`). or they write the key into the client's config themselves, in their own terminal or editor. not with Claude Code's `!` prefix: that adds the command and its output to the chat.
+
+**if the key is missing**, your user needs to get one (point 1). **if the api says `invalid_credentials`**, the key is expired, revoked or mistyped: your user creates a new one under **tokens** and replaces the old one themselves. if they use the shell profile, they start you again afterwards.
+
+keep keys out of source control. the cli can also store one for you: the user runs `crawlbrulee login` in their own terminal. the sdks and the mcp take it from the environment or a constructor argument.
 
 ## pick an interface
 

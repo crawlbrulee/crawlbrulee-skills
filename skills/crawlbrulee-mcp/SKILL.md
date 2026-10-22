@@ -15,32 +15,28 @@ this skill is the tool surface. for what the api actually does — extract forma
 
 ## install
 
-set `CRAWLBRULEE_API_KEY` (a `cwbl_…` key from <https://dashboard.crawlbrulee.com>) in the server's environment.
+the server reads `CRAWLBRULEE_API_KEY` (a `cwbl_…` key) from its environment each time it starts. your user gets the key and puts it in their shell profile themselves, as in **crawlbrulee** (set up auth). never ask for the key in the chat, and never print it.
 
-most hosts take a stdio launch command. this is the whole command:
+add the server with no key in its config, before or after the export:
 
 ```bash
-CRAWLBRULEE_API_KEY=cwbl_... npx -y @crawlbrulee/mcp
+claude mcp add crawlbrulee -- npx -y @crawlbrulee/mcp
 ```
 
-hosts that read a json mcp config take the same thing as an entry:
+hosts that read a json mcp config take the same thing as an entry: the command `npx` and the args `-y @crawlbrulee/mcp`.
 
-```jsonc
-// add to the host's mcp config file
-{
-  "mcpServers": {
-    "crawlbrulee": {
-      "command": "npx",
-      "args": ["-y", "@crawlbrulee/mcp"],
-      "env": { "CRAWLBRULEE_API_KEY": "cwbl_..." }
-    }
-  }
-}
-```
+where the variable doesn't reach the server on its own:
 
-if the host has its own "add mcp server" command, give it the same three parts: the command `npx`, the args `-y @crawlbrulee/mcp`, and the `CRAWLBRULEE_API_KEY` env var. per-host steps live in the [server's readme](https://github.com/crawlbrulee/crawlbrulee-mcp#readme).
+- **Codex** passes it only when it's listed. in `~/.codex/config.toml`, add `env_vars = ["CRAWLBRULEE_API_KEY"]` under `[mcp_servers.crawlbrulee]`.
+- **Gemini CLI** passes it only when it's listed. in `~/.gemini/settings.json` (or `.gemini/settings.json` in a project), give the `crawlbrulee` entry under `mcpServers` the line `"env": { "CRAWLBRULEE_API_KEY": "$CRAWLBRULEE_API_KEY" }`.
+- **Cursor and Windsurf:** name it to be sure. in `~/.cursor/mcp.json` (Cursor) or `mcp_config.json` (Windsurf, opened from its mcp settings), give the `crawlbrulee` entry under `mcpServers` the line `"env": { "CRAWLBRULEE_API_KEY": "${env:CRAWLBRULEE_API_KEY}" }`.
+- **apps opened from the dock or the start menu**, like Claude Desktop, may not read the shell profile. there, your user writes the key into the app's config themselves. for Claude Desktop that's `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows.
 
-the key is read on the first tool call rather than at startup, so a bad key surfaces as a clear tool error instead of a server that won't come up.
+the full entry for each host: <https://crawlbrulee.com/docs/mcp#install>.
+
+other ways your user can enter the key, without the shell profile: the Claude Code plugin asks for it in a masked prompt; VS Code asks in a masked prompt with an `inputs` entry (`"password": true`, then `"CRAWLBRULEE_API_KEY": "${input:crawlbrulee-api-key}"` in the server's `env`); or they write it into the config themselves, in their own terminal (in Claude Code, not with the `!` prefix: that adds the command and its output to the chat).
+
+when your user says it's done, call `whoami` to check the key works. the tools tell you what to do when the key is wrong: `missing_api_key` means your user needs to get a key, `invalid_credentials` means it's expired, revoked or mistyped and your user creates a new one. either way they put it in place themselves.
 
 ## tools
 
@@ -168,7 +164,7 @@ branch on the code. the set is the api's own error names (see **crawlbrulee-api*
 
 | code | meaning |
 | --- | --- |
-| `missing_api_key` | `CRAWLBRULEE_API_KEY` isn't set in the mcp host's environment |
+| `missing_api_key` | `CRAWLBRULEE_API_KEY` isn't set in the mcp host's environment. your user needs to get a key and put it in place themselves |
 | `crawlbrulee_error` | an api error without a typed name |
 | `internal_error` | a bug in this mcp — please open an issue |
 

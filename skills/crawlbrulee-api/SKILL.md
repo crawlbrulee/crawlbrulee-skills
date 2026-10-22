@@ -181,7 +181,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | --- | --- |
 | `invalid_url`, `url_too_long`, `unsupported_url_schema`, `url_credentials_not_supported`, `blocked_url` | the url was rejected before we fetched it — fix the input. `blocked_url` also comes back when the site redirected to an address we don't fetch — retrying won't help |
 | `validation_error` | the request body failed validation — this includes an invalid css selector, or too many selectors, in `extract.elements` |
-| `invalid_credentials` | missing, expired, or revoked api key — a genuine key problem, not a transient one (see `service_unavailable`) |
+| `invalid_credentials` | missing, expired, revoked or mistyped api key: a real key problem, not a passing one (see `service_unavailable`). your user creates a new key under **tokens** in the dashboard and puts it in place themselves; never ask for it in the chat |
 | `access_denied` | the token can't reach this resource |
 | `zero_data_retention_not_enabled` | HTTP 403 — you sent `zero_data_retention: true` but it is not enabled for your organization. not billed; send the request without it |
 | `not_found` | unknown async job id, or a job submitted more than 24 hours ago |
