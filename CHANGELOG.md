@@ -4,6 +4,15 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.7 (2026-10-22)
+
+### changed
+
+- the setup skills say who handles the api key: your user gets it (sign up if needed, no credit card, then **tokens** → **create token** in the dashboard) and puts it in place themselves, never through the chat. the agent guides them and checks the key with `whoami`.
+- the mcp skill adds the server with no key in its config, and names the file and line for the hosts that need one (Codex, Gemini CLI, Cursor, Windsurf, Claude Desktop). the full entries are in the docs: https://crawlbrulee.com/docs/mcp#install.
+- the skills say what to do when the key is missing, and when the api answers `invalid_credentials`: your user creates a new key and replaces the old one.
+- every host starts the mcp server with `npx -y @crawlbrulee/mcp@1.3.3`, whose key errors say the same.
+
 ## 1.3.6 (2026-10-19)
 
 ### changed
