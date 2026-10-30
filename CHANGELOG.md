@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.3.8 (2026-10-30)
+
+### changed
+
+- the screenshots skill says to use a screenshot link exactly as returned. if a link returns `403` or the image doesn't load, remove every query parameter except `token` and `expires`; if it still fails after the `expires` time, scrape the page again for a new link.
+
 ## 1.3.7 (2026-10-26)
 
 ### changed
