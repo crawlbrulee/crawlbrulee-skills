@@ -92,11 +92,11 @@ each key is a name you choose. the value is either a selector string (you get th
   "elements": {
     "heading": "h1",
     "books": {
-      "selector": "article.product_pod",
+      "selector": "article.book",
       "all": true,
       "fields": {
         "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" },
-        "price": ".price_color",
+        "price": ".price",
         "url": { "selector": "h3 a", "output": "attribute", "attribute": "href" }
       }
     },
@@ -109,13 +109,13 @@ the result has a top-level `elements` with the same names:
 
 ```jsonc
 "elements": {
-  "heading": "All products",
+  "heading": "Books",
   "books": [
-    { "title": "A Light in the Attic", "price": "£51.77", "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html" },
-    { "title": "Tipping the Velvet", "price": "£53.74", "url": "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html" }
+    { "title": "The Night Garden", "price": "€18.90", "url": "https://shop.example.com/books/the-night-garden" },
+    { "title": "Salt and Stone", "price": "€22.50", "url": "https://shop.example.com/books/salt-and-stone" }
     // … one object per book
   ],
-  "next_page": "https://books.toscrape.com/catalogue/page-2.html"
+  "next_page": "https://shop.example.com/books/?page=2"
 }
 ```
 
@@ -193,7 +193,7 @@ fields you didn't request are simply absent.
   "images": [{ "url": "https://example.com/a.png?v=2", "alt": "…" }],
   "screenshot": { /* see crawlbrulee-screenshots */ },
   "metadata": { "title": "…", "description": "…", "og_title": "…", "favicon_url": "…" },
-  "elements": { "heading": "All products", "books": [ /* … */ ] },  // only if you asked for elements
+  "elements": { "heading": "Books", "books": [ /* … */ ] },  // only if you asked for elements
   "unsupported_fields": [],
   "warnings": [],
   "response_meta": {

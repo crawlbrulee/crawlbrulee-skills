@@ -110,16 +110,16 @@ name them with css selectors in `extract.elements` and you get just those back a
   "elements": {
     "heading": "h1",
     "books": {
-      "selector": "article.product_pod",
+      "selector": "article.book",
       "all": true,
       "fields": {
         "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" },
-        "price": ".price_color"
+        "price": ".price"
       }
     }
   }
 }
-// → "elements": { "heading": "All products", "books": [{ "title": "A Light in the Attic", "price": "£51.77" }, …] }
+// → "elements": { "heading": "Books", "books": [{ "title": "The Night Garden", "price": "€18.90" }, …] }
 ```
 
 see **crawlbrulee-scrape** for how it works, and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction) for the full rules.

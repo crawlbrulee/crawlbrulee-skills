@@ -100,24 +100,24 @@ but its types don't name them — upgrade rather than casting.
 
 ```ts
 const page = await cb.scrape({
-  url: 'https://books.toscrape.com/',
+  url: 'https://shop.example.com/books/',
   extract: {
     cleaned_html: false,
     metadata: false,
     elements: {
       heading: 'h1',
       books: {
-        selector: 'article.product_pod',
+        selector: 'article.book',
         all: true,
         fields: {
           title: { selector: 'h3 a', output: 'attribute', attribute: 'title' },
-          price: '.price_color',
+          price: '.price',
         },
       },
     },
   },
 })
-console.log(page.elements?.books) // [{ title: 'A Light in the Attic', price: '£51.77' }, …]
+console.log(page.elements?.books) // [{ title: 'The Night Garden', price: '€18.90' }, …]
 ```
 
 `fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list). an invalid selector throws `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrapeAsync()`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).

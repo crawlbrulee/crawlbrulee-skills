@@ -105,17 +105,17 @@ when you need a few values (a price, a title, every product on a list), name the
 
 ```bash
 # the text of the first match, one flag per name
-crawlbrulee scrape url https://books.toscrape.com --element heading=h1 --element price=.price_color --json | jq .elements
+crawlbrulee scrape url https://shop.example.com/books/ --element heading=h1 --element price=.price --json | jq .elements
 
 # the full form: one object per product, with fields read inside each product
 # (the selector :scope reads the product element itself)
-crawlbrulee scrape url https://books.toscrape.com --json --elements '{
-  "books": { "selector": "article.product_pod", "all": true,
-    "fields": { "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" }, "price": ".price_color" } }
+crawlbrulee scrape url https://shop.example.com/books/ --json --elements '{
+  "books": { "selector": "article.book", "all": true,
+    "fields": { "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" }, "price": ".price" } }
 }' | jq '.elements.books[:2]'
-# → [{ "title": "A Light in the Attic", "price": "£51.77" }, { "title": "Tipping the Velvet", "price": "£53.74" }]
+# → [{ "title": "The Night Garden", "price": "€18.90" }, { "title": "Salt and Stone", "price": "€22.50" }]
 
-crawlbrulee scrape url https://books.toscrape.com --elements @elements.json --json   # read the json from a file
+crawlbrulee scrape url https://shop.example.com/books/ --elements @elements.json --json   # read the json from a file
 ```
 
 - on their own, `--element` / `--elements` return only the elements (plus metadata unless `--no-metadata`); add `-m` or another content flag to get the page too.

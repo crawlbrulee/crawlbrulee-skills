@@ -148,18 +148,18 @@ need `crawlbrulee` `1.1.0` or newer. on an older release, upgrade to see the pag
 
 ```python
 page = client.scrape(
-    url="https://books.toscrape.com/",
+    url="https://shop.example.com/books/",
     extract=ScrapeExtract(
         cleaned_html=False,
         metadata=False,
         elements={
             "heading": "h1",
             "books": {
-                "selector": "article.product_pod",
+                "selector": "article.book",
                 "all": True,
                 "fields": {
                     "title": {"selector": "h3 a", "output": "attribute", "attribute": "title"},
-                    "price": ".price_color",
+                    "price": ".price",
                 },
             },
         },
@@ -168,7 +168,7 @@ page = client.scrape(
 books = page.elements["books"] if page.elements is not None else []
 if isinstance(books, list):   # `all: True` gives a list
     for book in books[:2]:
-        print(book)           # {'title': 'A Light in the Attic', 'price': '£51.77'}
+        print(book)           # {'title': 'The Night Garden', 'price': '€18.90'}
 ```
 
 `page.elements` is `None` when you didn't ask for it. `fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `None` (`[]` for a list). an invalid selector raises `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).

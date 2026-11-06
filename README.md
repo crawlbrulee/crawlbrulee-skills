@@ -46,19 +46,19 @@ when an agent needs a few values from a page — prices, titles, links, a table'
 
 ```json
 {
-  "url": "https://books.toscrape.com/",
+  "url": "https://shop.example.com/books/",
   "extract": {
     "cleaned_html": false,
     "metadata": false,
     "elements": {
       "heading": "h1",
-      "books": { "selector": "article.product_pod", "all": true, "fields": { "price": ".price_color" } }
+      "books": { "selector": "article.book", "all": true, "fields": { "price": ".price" } }
     }
   }
 }
 ```
 
-the result carries `"elements": { "heading": "All products", "books": [{ "price": "£51.77" }, …] }`. selector rules and limits: [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+the result carries `"elements": { "heading": "Books", "books": [{ "price": "€18.90" }, …] }`. selector rules and limits: [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 ## install
 
@@ -76,7 +76,7 @@ you can also copy any `skills/<name>/` folder into your agent's skills directory
 
 ## install as a plugin
 
-this repo is also a plugin. a plugin install gives you the same ten skills **plus** the crawlbrulee mcp server, wired to start with `npx -y @crawlbrulee/mcp@1.3.3` (each plugin release names one exact mcp version). these commands work straight from the repo — no store listing needed.
+this repo is also a plugin. a plugin install gives you the same ten skills **plus** the crawlbrulee mcp server, wired to start with `npx -y @crawlbrulee/mcp@1.4.0` (each plugin release names one exact mcp version). these commands work straight from the repo — no store listing needed.
 
 ```bash
 # Claude Code (and Claude Cowork)
