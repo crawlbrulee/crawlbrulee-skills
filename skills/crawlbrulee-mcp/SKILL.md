@@ -102,7 +102,7 @@ only `url` is required. a bare call returns metadata + cleaned html — **markdo
 // → "elements": { "heading": "All products", "books": [{ "title": "A Light in the Attic", "price": "£51.77" }, …] }
 ```
 
-`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+`fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 **your own headers and cookies.** `scrape` and `scrape_async` take `headers` (an object of name → value) and `cookies` (a list of `{ "name", "value" }`), sent to the site with the request (needs `@crawlbrulee/mcp` `1.4.0` or newer):
 

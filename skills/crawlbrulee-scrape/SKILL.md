@@ -84,7 +84,7 @@ each key is a name you choose. the value is either a selector string (you get th
 | `output` | `text` (default), `html` (the outer html) or `attribute` |
 | `attribute` | the attribute to read when `output` is `attribute`. `href` and `src` come back as full urls |
 | `all` | `true` returns every match as a list, not just the first |
-| `fields` | use instead of `output`: name → selector (or object), read **inside each match**. one object per match; nests up to 3 levels |
+| `fields` | use instead of `output`: name → selector (or object), read **inside each match**; the selector `:scope` reads the match itself. one object per match; nests up to 3 levels |
 
 ```jsonc
 "extract": {
@@ -119,7 +119,7 @@ the result has a top-level `elements` with the same names:
 }
 ```
 
-- **use `fields` for a list of records.** fields look only inside each match, so a card's title, price and url stay together. for the same reason a field selector that starts with `+` or `~` matches nothing, and a field can't read the matched element itself: an attribute on the `<article>` you matched comes back `null`, so match one level higher instead. two separate `all: true` lists can differ in length (a match without the attribute is left out), so don't pair them up by position.
+- **use `fields` for a list of records.** fields look only inside each match, so a product's title, price and url stay together. for the same reason a field selector that starts with `+` or `~` matches nothing. to read the matched element itself, use the selector `:scope`: `{ "selector": ":scope", "output": "attribute", "attribute": "href" }` gives the matched element's own `href`. a field without `:scope` never answers with the match itself. two separate `all: true` lists can differ in length (a match without the attribute is left out), so don't pair them up by position.
 - **every name you asked for is always there**, at every level. no match is `null`, or `[]` with `all: true`.
 - values are read **after `cleanup`**, from the same page as `links` and `images`. if they render client-side, add `require_js: true`.
 - `<script>` and `<style>` can't be selected, so JSON-LD and inline script data are out of reach — ask for `raw_html` for those.

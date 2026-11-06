@@ -120,7 +120,7 @@ const page = await cb.scrape({
 console.log(page.elements?.books) // [{ title: 'A Light in the Attic', price: '£51.77' }, …]
 ```
 
-`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list). an invalid selector throws `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrapeAsync()`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+`fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list). an invalid selector throws `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrapeAsync()`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 **your own headers and cookies: `headers` and `cookies`.** send your own http headers and cookies with the scrape (needs `@crawlbrulee/sdk` `1.4.0` or newer). read the secrets from the environment, not from source:
 

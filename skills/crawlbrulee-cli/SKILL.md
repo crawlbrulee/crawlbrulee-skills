@@ -107,7 +107,8 @@ when you need a few values (a price, a title, every product on a list), name the
 # the text of the first match, one flag per name
 crawlbrulee scrape url https://books.toscrape.com --element heading=h1 --element price=.price_color --json | jq .elements
 
-# the full form: one object per product card, with fields read inside each card
+# the full form: one object per product, with fields read inside each product
+# (the selector :scope reads the product element itself)
 crawlbrulee scrape url https://books.toscrape.com --json --elements '{
   "books": { "selector": "article.product_pod", "all": true,
     "fields": { "title": { "selector": "h3 a", "output": "attribute", "attribute": "title" }, "price": ".price_color" } }

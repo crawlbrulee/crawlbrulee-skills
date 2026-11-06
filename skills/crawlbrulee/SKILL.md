@@ -102,7 +102,7 @@ for mcp, configure the server once (see **crawlbrulee-mcp**) and the agent calls
 
 ## need a few values, not the whole page?
 
-name them with css selectors in `extract.elements` and you get just those back as json — prices, titles, links, one object per product card or table row. that is far less to read than the markdown, and it costs no extra credits:
+name them with css selectors in `extract.elements` and you get just those back as json — prices, titles, links, one object per product or table row. that is far less to read than the markdown, and it costs no extra credits:
 
 ```jsonc
 "extract": {

@@ -171,7 +171,7 @@ if isinstance(books, list):   # `all: True` gives a list
         print(book)           # {'title': 'A Light in the Attic', 'price': '£51.77'}
 ```
 
-`page.elements` is `None` when you didn't ask for it. `fields` are read inside each match, so each card's values stay together. a name with no match is `None` (`[]` for a list). an invalid selector raises `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+`page.elements` is `None` when you didn't ask for it. `fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `None` (`[]` for a list). an invalid selector raises `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 **your own headers and cookies: `headers` and `cookies`.** send your own http headers and cookies with the scrape (needs `crawlbrulee` `1.4.0` or newer). read the secrets from the environment, not from source:
 
