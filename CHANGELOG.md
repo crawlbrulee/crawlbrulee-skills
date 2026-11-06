@@ -4,7 +4,7 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
-## 1.4.0 (unreleased)
+## 1.4.0 (2026-11-06)
 
 ### added
 
@@ -12,6 +12,11 @@ this project follows [Semantic Versioning](https://semver.org). the version is t
 - **client names.** `headers` and `cookies` on `scrape()` / `scrapeAsync()` in the js sdk and on `scrape` / `scrape_async` in the python sdk (1.4.0), the same input on the `scrape` and `scrape_async` tools in the mcp (1.4.0), and the `--header "Name: value"`, `--cookie "name=value"`, `--headers <json>` and `--cookies <json>` flags in the cli (5.4.0). the mcp skill says that values pass through the chat, so use short-lived tokens there.
 - **the `custom_user_agent` warning.** the request set its own `User-Agent` header; this can lower the success rate. added to the warning table in `crawlbrulee-scrape`.
 - **`:scope` in `fields`.** `crawlbrulee-scrape` explains that the selector `:scope` reads the match itself, for example the matched element's own `href`; the cli, mcp and sdk skills say it in one line.
+
+### changed
+
+- the plugin starts `@crawlbrulee/mcp` 1.4.0.
+- the elements examples use a made-up shop (`shop.example.com`, `article.book`, `.price`), instead of a scraping sandbox run by another company.
 
 ## 1.3.8 (2026-10-30)
 
