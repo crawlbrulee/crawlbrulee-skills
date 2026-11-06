@@ -51,6 +51,8 @@ curl -X POST https://api.crawlbrulee.com/api/map \
 
 two differences from scrape worth remembering: **map takes `location.country` but not `location.locale`**, and it has no `require_js`.
 
+**map takes no `headers` or `cookies`**: it sees a site the way a visitor without them does. if the pages you want need your own headers or cookies, list their urls another way and scrape each one with `headers` or `cookies` (see **crawlbrulee-scrape**).
+
 ### `limit` and `max_urls` are not the same ceiling
 
 `limit` is a page size. it decides how many of the collected urls come back in *this* response; you page for the rest, and nothing is lost.

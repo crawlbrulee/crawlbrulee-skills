@@ -171,7 +171,22 @@ if isinstance(books, list):   # `all: True` gives a list
         print(book)           # {'title': 'A Light in the Attic', 'price': '£51.77'}
 ```
 
-`page.elements` is `None` when you didn't ask for it. `fields` are read inside each match, so each card's values stay together. a name with no match is `None` (`[]` for a list). an invalid selector raises `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrape_async`. see **crawlbrulee-scrape** and [elements](https://crawlbrulee.com/docs/scrape/elements).
+`page.elements` is `None` when you didn't ask for it. `fields` are read inside each match, so each card's values stay together. a name with no match is `None` (`[]` for a list). an invalid selector raises `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+
+**your own headers and cookies: `headers` and `cookies`.** send your own http headers and cookies with the scrape (needs `crawlbrulee` `1.4.0` or newer). read the secrets from the environment, not from source:
+
+```python
+import os
+
+page = client.scrape(
+    url="https://app.example.com/orders",
+    extract=ScrapeExtract(markdown=True),
+    headers={"Authorization": f"Bearer {os.environ['APP_TOKEN']}"},
+    cookies=[{"name": "session_id", "value": os.environ["APP_SESSION"]}],
+)
+```
+
+`headers` is a name → value dict, `cookies` a list of dicts with `name` and `value`. both work on `scrape` and `scrape_async`, sync and async clients alike, not on `map`. headers go only to the origin of `url` (or its https version, for an http url), cookies only to its host; the request skips the cache and is billed as a normal fresh scrape. a header you can't set, or values over the limits, raises `ValidationError` (the message names the header). your own `User-Agent` adds `custom_user_agent` to `page.warnings`. see **crawlbrulee-scrape** and [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
 
 **zero data retention.** `zero_data_retention=True` is accepted on `scrape`, `scrape_async` and `map`, sync and async clients alike; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call raises `ZeroDataRetentionNotEnabledError` (needs `crawlbrulee` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 

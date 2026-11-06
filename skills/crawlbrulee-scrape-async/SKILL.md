@@ -53,6 +53,8 @@ curl -s https://api.crawlbrulee.com/api/scrape/result/683a1f2b4c5d6e7f8a9b0c1d \
 
 **`extract.elements` works on a job too.** put it in the submit body as for a sync scrape; the result carries `elements` for the same 24 hours as the rest of the result. it is a good fit for a batch where you only need a few values per page, such as a price and a title — no extra credits. see **crawlbrulee-scrape**.
 
+**`headers` and `cookies` work on a job too**. put them in the submit body as for a sync scrape (see **crawlbrulee-scrape**). their values never come back in `status` or `result` answers. like a sync scrape with them, the job never reads from or writes to the cache.
+
 **`zero_data_retention: true`** works on a job too (see **crawlbrulee-api**): the result is kept for 24 hours, then deleted, so fetch it inside that window. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). poll on a sensible interval — a couple of seconds is plenty. every client ships a helper that wraps this loop (`waitForScrape` / `wait_for_scrape` / `crawlbrulee scrape wait`), so prefer that over hand-rolling it.
 
 ## webhooks: get called instead of polling

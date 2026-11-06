@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-mcp
-description: use when an mcp-aware agent or editor should scrape pages (or pull named values out of them by css selector), map sites, run background scrape jobs, or check crawlbrulee credits as native tool calls. covers installing the `@crawlbrulee/mcp` stdio server and its seven tools.
+description: use when an mcp-aware agent or editor should scrape pages (or pull named values out of them by css selector, or send their own headers and cookies with the request), map sites, run background scrape jobs, or check crawlbrulee credits as native tool calls. covers installing the `@crawlbrulee/mcp` stdio server and its seven tools.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -102,7 +102,23 @@ only `url` is required. a bare call returns metadata + cleaned html — **markdo
 // → "elements": { "heading": "All products", "books": [{ "title": "A Light in the Attic", "price": "£51.77" }, …] }
 ```
 
-`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [elements](https://crawlbrulee.com/docs/scrape/elements).
+`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+
+**your own headers and cookies.** `scrape` and `scrape_async` take `headers` (an object of name → value) and `cookies` (a list of `{ "name", "value" }`), sent to the site with the request (needs `@crawlbrulee/mcp` `1.4.0` or newer):
+
+```jsonc
+{
+  "url": "https://app.example.com/orders",
+  "extract": { "markdown": true },
+  "headers": { "Authorization": "Bearer <short-lived token>" },
+  "cookies": [{ "name": "session_id", "value": "<session>" }]
+}
+```
+
+- **the values pass through the chat.** a tool call's input stays in the chat history, so ask your user for a short-lived token or session made for this, never a password or a long-lived key. say so before you ask. for long-lived secrets, use the cli or an sdk, where you can read them from an environment variable or a file.
+- headers go only to the origin of `url` (or its https version, for an http url), cookies only to its host. the call skips the cache and is billed as a normal fresh scrape. a header you can't set is a `validation_error` whose message names it. your own `User-Agent` adds the `custom_user_agent` warning. `map` doesn't take them.
+- a server older than `1.4.0` doesn't know these fields and drops them. if the `scrape` tool's input has no `headers` field, the server is too old: tell your user to update it. if the field is there and the result is still the site's login page, the token or session has likely expired.
+- see **crawlbrulee-scrape** and [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
 
 see **crawlbrulee-scrape** and **crawlbrulee-screenshots** for what the fields mean.
 

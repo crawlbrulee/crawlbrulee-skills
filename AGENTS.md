@@ -17,3 +17,10 @@ was cloned on its own.
 `.agents/` and `.claude/` are git-ignored in this repository on purpose. The skills
 installer scans those folders, so anything tracked there would be installed next to the
 public skills. Only `skills/` holds published skills.
+
+## before a commit or release
+
+this repository is public, and it has its own maintainer skill. reading that skill is part of
+the pre-commit checks, and of every release. find it through the umbrella `crawlbrulee-ecosystem`
+skill (path above), which names the skill for each repository, then check the change against it
+before you run the tests. it may be absent if this repository was cloned on its own.

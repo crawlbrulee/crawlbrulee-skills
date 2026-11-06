@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-cli
-description: use when driving crawlbrulee from a terminal or a shell script — the `crawlbrulee` / `npx crawlbrulee` command. covers scrape url, scrape status/result/wait, map, usage, whoami, login/logout/view-config, every flag, picking values by css selector (--element / --elements), the screenshot shorthand, and text-vs-json output.
+description: use when driving crawlbrulee from a terminal or a shell script — the `crawlbrulee` / `npx crawlbrulee` command. covers scrape url, scrape status/result/wait, map, usage, whoami, login/logout/view-config, every flag, picking values by css selector (--element / --elements), your own headers and cookies (--header / --cookie), the screenshot shorthand, and text-vs-json output.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -61,6 +61,10 @@ note the shape: **`scrape` is a command group, so scraping a url is `scrape url 
 | `--locale <bcp47>` | | e.g. `en-US` |
 | `--country <iso>` | | e.g. `US`, or `eu` / `europe` |
 | `--zero-data-retention` | | keep the result out of the shared cache, +1 credit (cli `5.2.0`+) |
+| `--header "Name: value"` | | an http header for the site; repeatable (cli `5.4.0`+) |
+| `--cookie "name=value"` | | a cookie for the site; repeatable (cli `5.4.0`+) |
+| `--headers <json>` | | headers as a json object; `@path` reads a file (cli `5.4.0`+) |
+| `--cookies <json>` | | cookies as json; `@path` reads a file (cli `5.4.0`+) |
 | `-o, --output <file>` | | write to a file instead of stdout |
 
 ```bash
@@ -75,6 +79,25 @@ crawlbrulee scrape url https://example.com --json | jq .response_meta.usage
 `--proxy` takes `basic`, `advanced`, or `auto` only. omit it and the server applies its default.
 
 `--zero-data-retention` (also on `scrape url --async` and on `map`) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). an older cli fails with `unknown option`; check `crawlbrulee --version`.
+
+### your own headers and cookies
+
+send your own http headers and cookies with the scrape, for example an `Authorization` header or a fixed `User-Agent` that a site has on its allowlist:
+
+```bash
+crawlbrulee scrape url https://app.example.com/orders \
+  --header "Authorization: Bearer $APP_TOKEN" \
+  --cookie "session_id=$APP_SESSION"
+
+crawlbrulee scrape url https://app.example.com/orders --headers @headers.json --cookies @cookies.json
+```
+
+- `--header` and `--cookie` can be given more than once. `--headers` takes a json object of name → value; `--cookies` takes the api's `cookies` json, a list of `{ "name", "value" }`.
+- for the same field, use either the flag or the json form, not both: `--header` with `--headers` is refused, and so is `--cookie` with `--cookies`.
+- both work with `--async`, not on `map`.
+- keep secrets out of the command itself. `@path` (`--headers @headers.json`, `--cookies @cookies.json`) is the safest form: the value never appears in the command. an environment variable, as above, keeps it out of your shell history, but the shell puts the real value into the command, where other users of the machine can see it with `ps`.
+- headers go only to the origin of the url (or its https version, for an http url), cookies only to its host. the request skips the cache and is billed as a normal fresh scrape. a header you can't set fails with `validation_error`, and the message names it. your own `User-Agent` adds the `custom_user_agent` warning. see **crawlbrulee-scrape** and [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
+- an older cli fails with `unknown option`; check `crawlbrulee --version`.
 
 ### picking values: `--element` and `--elements`
 
@@ -100,7 +123,7 @@ crawlbrulee scrape url https://books.toscrape.com --elements @elements.json --js
 - the two flags combine, and both work with `--async`.
 - each name may appear only once across both flags, `--elements` may be given only once, and `--elements '{}'` (an empty object) is refused, even next to `--element`.
 - a name with no match is `null` (`[]` for a list). an invalid selector fails with `validation_error`. when a value hits a limit, `warnings` has `elements_truncated`.
-- an older cli fails with `unknown option`; check `crawlbrulee --version`. full rules: [elements](https://crawlbrulee.com/docs/scrape/elements).
+- an older cli fails with `unknown option`; check `crawlbrulee --version`. full rules: [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 ### screenshot shorthand (`-ss` / `--screenshot`)
 

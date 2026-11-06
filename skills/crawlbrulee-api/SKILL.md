@@ -113,6 +113,10 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 
 when it is not enabled, the request fails with a `403` `zero_data_retention_not_enabled`, not billed. the added credit shows as `zero_data_retention_credit_cost` in `response_meta.usage`.
 
+## your own headers and cookies
+
+`POST /api/scrape` and `POST /api/scrape/async` take `headers` (an object of name → value) and `cookies` (a list of `{ name, value }`): your own headers and cookies, sent to the site with the request. `/api/map` doesn't take them. headers go only to the origin of `url` (or its https version, for an http url), cookies only to its host. a request with either never reads from or writes to the cache, and is billed as a normal fresh scrape. setting your own `User-Agent` adds the `custom_user_agent` warning. the limits, the headers you can't set and an example are in **crawlbrulee-scrape**; the full rules are in [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
+
 ## proxy tiers
 
 `proxy` accepts `basic`, `advanced`, or `auto`, and defaults to **`auto`**.
@@ -129,7 +133,7 @@ cached results are proxy-agnostic — a result cached from a `basic` fetch will 
 
 | field | applies to | notes |
 | --- | --- | --- |
-| `location.locale` | scrape only | bcp-47, e.g. `en-US`. sets `Accept-Language` and `navigator.language`. |
+| `location.locale` | scrape only | bcp-47, e.g. `en-US`. the language to ask the site for. |
 | `location.country` | scrape and map | iso 3166-1 alpha-2, case-insensitive (`us`, `DE`), or the regional values `eu` / `europe`. picks the proxy exit country. |
 
 `eu` and `europe` are **not** aliases: `eu` exits from an EU member state; `europe` exits from anywhere in Europe, including non-eu countries like the uk, Switzerland, and Norway. pick `eu` when the distinction matters to you.
@@ -154,6 +158,7 @@ things worth knowing about the cache key:
 - **`require_js: true` only matches entries that were rendered with JavaScript.**
 - **`cleanup` is part of the key**, so `ads_and_popups` and `exclude_selectors` both stay cacheable. requests with the same removals share an entry; different ones don't.
 - a screenshot with a non-zero `actions_before` wait or scroll disables caching.
+- **a request with `headers` or `cookies` never reads from or writes to the cache.** it is always a fresh fetch, billed as one.
 
 ## account
 
@@ -180,7 +185,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `name` | what to do |
 | --- | --- |
 | `invalid_url`, `url_too_long`, `unsupported_url_schema`, `url_credentials_not_supported`, `blocked_url` | the url was rejected before we fetched it — fix the input. `blocked_url` also comes back when the site redirected to an address we don't fetch — retrying won't help |
-| `validation_error` | the request body failed validation — this includes an invalid css selector, or too many selectors, in `extract.elements` |
+| `validation_error` | the request body failed validation — this includes an invalid css selector, or too many selectors, in `extract.elements`, and a header you can't set or `headers` / `cookies` over their limits (the message names the header) |
 | `invalid_credentials` | missing, expired, revoked or mistyped api key: a real key problem, not a passing one (see `service_unavailable`). your user creates a new key under **tokens** in the dashboard and puts it in place themselves; never ask for it in the chat |
 | `access_denied` | the token can't reach this resource |
 | `zero_data_retention_not_enabled` | HTTP 403 — you sent `zero_data_retention: true` but it is not enabled for your organization. not billed; send the request without it |

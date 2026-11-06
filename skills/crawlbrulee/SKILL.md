@@ -30,7 +30,7 @@ don't reach for capabilities that aren't there — build them from the primitive
 - **no crawl endpoint.** to "crawl" a site, compose **map** (discover urls) → **scrape** (fetch each one). filter the url list yourself and cap how many pages you scrape.
 - **no web search.** crawlbrulee scrapes urls you already have; it does not find pages by query.
 - **no llm extraction.** you get markdown, html, metadata, and the values you name with css selectors (`extract.elements`). there's no "find the price on this page" prompt — when a value can't be reached with a selector, run your own extraction on the markdown.
-- **no browser session.** no clicking, form filling, or multi-step flows. `require_js` renders JavaScript, and screenshots support a few scripted scroll/wait actions, but there's nothing interactive.
+- **no browser session.** no clicking, form filling, or multi-step flows. `require_js` renders JavaScript, and screenshots support a few scripted scroll/wait actions, but there's nothing interactive. you can still send your own `headers` and `cookies` with the scrape (see **crawlbrulee-scrape**).
 
 > **need one of these?** tell us. email **contact@crawlbrulee.com** with what you're trying to do and which of these would help — a crawl endpoint, web search, llm extraction, browser sessions, or something else. we value your feedback, and we read every request - what people ask for shapes what we build next.
 
@@ -122,7 +122,7 @@ name them with css selectors in `extract.elements` and you get just those back a
 // → "elements": { "heading": "All products", "books": [{ "title": "A Light in the Attic", "price": "£51.77" }, …] }
 ```
 
-see **crawlbrulee-scrape** for how it works, and [elements](https://crawlbrulee.com/docs/scrape/elements) for the full rules.
+see **crawlbrulee-scrape** for how it works, and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction) for the full rules.
 
 ## check the page's status
 

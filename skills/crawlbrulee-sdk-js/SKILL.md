@@ -120,7 +120,20 @@ const page = await cb.scrape({
 console.log(page.elements?.books) // [{ title: 'A Light in the Attic', price: '£51.77' }, …]
 ```
 
-`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list). an invalid selector throws `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrapeAsync()`. see **crawlbrulee-scrape** and [elements](https://crawlbrulee.com/docs/scrape/elements).
+`fields` are read inside each match, so each card's values stay together. a name with no match is `null` (`[]` for a list). an invalid selector throws `ValidationError`; `elements_truncated` in `page.warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `page.unsupported_fields`. it works the same on `scrapeAsync()`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+
+**your own headers and cookies: `headers` and `cookies`.** send your own http headers and cookies with the scrape (needs `@crawlbrulee/sdk` `1.4.0` or newer). read the secrets from the environment, not from source:
+
+```ts
+const page = await cb.scrape({
+  url: 'https://app.example.com/orders',
+  extract: { markdown: true },
+  headers: { Authorization: `Bearer ${process.env.APP_TOKEN}` },
+  cookies: [{ name: 'session_id', value: process.env.APP_SESSION! }],
+})
+```
+
+`headers` is a name → value object, `cookies` a list of `{ name, value }`. both work on `scrape()` and `scrapeAsync()`, not on `map()`. headers go only to the origin of `url` (or its https version, for an http url), cookies only to its host; the request skips the cache and is billed as a normal fresh scrape. a header you can't set, or values over the limits, throws `ValidationError` (the message names the header). your own `User-Agent` adds `custom_user_agent` to `page.warnings`. see **crawlbrulee-scrape** and [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
 
 **zero data retention.** `zero_data_retention: true` is accepted on `scrape()`, `scrapeAsync()` and `map()`; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call throws `ZeroDataRetentionNotEnabledError` (needs `@crawlbrulee/sdk` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 

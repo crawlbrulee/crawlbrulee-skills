@@ -58,7 +58,7 @@ when an agent needs a few values from a page — prices, titles, links, a table'
 }
 ```
 
-the result carries `"elements": { "heading": "All products", "books": [{ "price": "£51.77" }, …] }`. selector rules and limits: [elements](https://crawlbrulee.com/docs/scrape/elements).
+the result carries `"elements": { "heading": "All products", "books": [{ "price": "£51.77" }, …] }`. selector rules and limits: [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 ## install
 

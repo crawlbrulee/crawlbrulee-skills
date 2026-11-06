@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-scrape
-description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector. covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
+description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or sending your own headers and cookies with the request. covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -40,10 +40,12 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 | `location.locale` | string | — | bcp-47, e.g. `en-US` |
 | `location.country` | string | — | alpha-2, or `eu` / `europe` |
 | `zero_data_retention` | boolean | `false` | keep the result out of the shared cache, +1 credit — see below |
+| `headers` | object, name → string | — | your own http headers for the site, e.g. an api key or a fixed `User-Agent` the site has on its allowlist. see [below](#headers-and-cookies) |
+| `cookies` | list of `{ name, value }` | — | your own cookies for the site. see [below](#headers-and-cookies) |
 
 `max_age` is the only cache field — `cache` rejects anything else.
 
-**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry.
+**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry. a request with `headers` or `cookies` skips the cache entirely (see [below](#headers-and-cookies)).
 
 **`zero_data_retention: true`** goes at the top level of the body, not inside `cache`. keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
@@ -126,7 +128,7 @@ the result has a top-level `elements` with the same names:
 - a list stops at 1,000 matches, and a request has limits on matches and size. when a value hits one, `warnings` has `elements_truncated`.
 - not an html page (json, plain text, xml or markdown)? `elements` comes back in `unsupported_fields`. a pdf or an image is a `415` `unsupported_content` instead.
 
-the full rules and limits are in the docs: [elements](https://crawlbrulee.com/docs/scrape/elements).
+the full rules and limits are in the docs: [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 ## trimming the page
 
@@ -148,6 +150,31 @@ three things to know:
 - it shapes `markdown`, `cleaned_html`, `links`, `images` and the screenshot.
 - it **never** touches `raw_html`. that is always the page as it arrived, before anything was removed — so you can always get back what we started from.
 - both settings are part of the cache key, so both stay cacheable. requests with the same `exclude_selectors` share a cache entry; different ones don't.
+
+## headers and cookies
+
+send your own `headers` (for example an api key, a bearer token, or a fixed `User-Agent` that the site has on its allowlist) and `cookies` with the scrape. they go to the site with the request.
+
+```jsonc
+{
+  "url": "https://app.example.com/orders",
+  "headers": { "Authorization": "Bearer <token>", "X-Tenant-Id": "acme" },
+  "cookies": [{ "name": "session_id", "value": "<session>" }]
+}
+```
+
+- `headers` is an object of header name → string value. `cookies` is a list of `{ "name", "value" }` objects, both strings, and the name can't be empty. both work on a sync scrape and on an async job, not on map.
+- **where they go:** headers are sent only to the origin of `url` (same scheme, host and port), or to its https version when `url` is http, and not on a redirect to another origin. cookies go only to the host of `url`. cookies the site sets while redirecting are not kept.
+- **never cached:** a request with headers or cookies never reads from or writes to the cache. it is billed as a normal fresh scrape, with no extra credits.
+- **limits:** up to 10 headers and up to 20 cookies. each cookie is up to 4096 bytes (name and value), and headers and cookies together are up to 16384 bytes. values are printable ascii, with no space or tab at either end, and a cookie value may not hold `;`. a `__Secure-`, `__Host-` or `__Http-` cookie needs an https url.
+- **headers you can't set:** headers a browser doesn't let a web page set can't be set here either, for security reasons. neither can headers that would make the site send back only part of the page, like `Range` or `If-None-Match`. send cookies in `cookies`, not a `Cookie` header, and the language in `location.locale`, not `Accept-Language`. a refused header is a `400` `validation_error` whose message names the header. the same header name twice (in any case) is refused too.
+- **`User-Agent`:** you can set your own, but it can lower the success rate, and the response then carries the `custom_user_agent` warning. never put secrets in the `User-Agent`.
+- a `Referer` must be the full http or https url of a public page, with no username or password.
+- **use https:** on a plain `http://` url, headers and cookies travel unencrypted.
+- header and cookie values stay out of our logs, and async status and result answers never show them.
+- these values are your user's secrets. in code or the cli, read them from an environment variable or a file instead of writing them into the chat.
+
+the full rules are in the docs: [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
 
 ## the response
 
@@ -216,6 +243,14 @@ a second family means that section's extraction failed, so the field came back o
 | `screenshot_unavailable` | a screenshot was asked for, but the page came back from the `http` engine without one — `screenshot` is omitted |
 
 **an empty field carrying one of these does not mean the page had none.** that's the whole point of the code — it separates "we couldn't read them" from "there weren't any". don't report the absence as a finding; re-run the scrape. an empty field with no such warning is a real absence.
+
+one more code is about your request, not the page:
+
+| code | what it means |
+| --- | --- |
+| `custom_user_agent` | the request set its own `User-Agent` header; this can lower the success rate. see [headers and cookies](#headers-and-cookies) |
+
+new codes can be added over time, so treat a code you don't know as a note, not a failure.
 
 cache hits and async result fetches carry their warnings too. `metadata_truncated` is retired and no longer sent; it can still show up on results stored before it was retired.
 
