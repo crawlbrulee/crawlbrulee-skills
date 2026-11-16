@@ -87,7 +87,7 @@ client.scrape(
 )
 ```
 
-`None`-valued options are dropped from the request entirely, so the server's defaults apply — passing `proxy=None` is the same as not passing `proxy`. a bare `scrape` returns metadata + cleaned html; **markdown is opt-in**.
+`None`-valued options are dropped from the request entirely, so the server's defaults apply — passing `proxy=None` is the same as not passing `proxy`. a bare `scrape` returns markdown + metadata; **cleaned html is opt-in**.
 
 ## methods
 
@@ -150,7 +150,7 @@ need `crawlbrulee` `1.1.0` or newer. on an older release, upgrade to see the pag
 page = client.scrape(
     url="https://shop.example.com/books/",
     extract=ScrapeExtract(
-        cleaned_html=False,
+        markdown=False,
         metadata=False,
         elements={
             "heading": "h1",

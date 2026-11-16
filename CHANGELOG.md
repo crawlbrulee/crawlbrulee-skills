@@ -4,6 +4,15 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.4.1 (unreleased)
+
+### changed
+
+- **markdown is the default.** a scrape with no `extract`, or with flags left out, returns `markdown` + `metadata`, not `cleaned_html` + `metadata`. `crawlbrulee-scrape`, the overview in `crawlbrulee`, `crawlbrulee-mcp` and `crawlbrulee-sdk-python` say so. naming other formats keeps the two defaults on, so every "only these values" example now sends `markdown: false` and `metadata: false`.
+- `crawlbrulee-cli` no longer says the cli default differs from the api: both return markdown + metadata. it says that the flags you pick replace that default (cli 5.4.1), and the overview in `crawlbrulee` points there.
+- the plugin starts `@crawlbrulee/mcp` 1.5.0, which asks for markdown by default.
+- `crawlbrulee-screenshots` says what a screenshot-only request is: every other format off, `markdown` and `metadata` included, and no `elements`.
+
 ## 1.4.0 (2026-11-06)
 
 ### added

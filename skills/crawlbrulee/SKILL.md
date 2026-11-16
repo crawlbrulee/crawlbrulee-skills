@@ -98,7 +98,7 @@ print(page.markdown)
 
 for mcp, configure the server once (see **crawlbrulee-mcp**) and the agent calls the `scrape` tool directly.
 
-> heads up: a bare scrape returns `metadata` + `cleaned_html`. ask for `markdown`, `links`, `images`, `raw_html`, or `screenshot` explicitly. the cli is the exception — it defaults to markdown + metadata.
+> heads up: a bare scrape returns `markdown` + `metadata`. ask for `cleaned_html`, `links`, `images`, `raw_html`, or `screenshot` explicitly. in the api, the sdks and mcp, naming one keeps the two defaults on; set `markdown: false` or `metadata: false` to drop them. in the cli, the flags you pick replace the default (see **crawlbrulee-cli**).
 
 ## need a few values, not the whole page?
 
@@ -106,7 +106,7 @@ name them with css selectors in `extract.elements` and you get just those back a
 
 ```jsonc
 "extract": {
-  "cleaned_html": false, "metadata": false,   // skip the defaults, keep just the values
+  "markdown": false, "metadata": false,   // skip the defaults, keep just the values
   "elements": {
     "heading": "h1",
     "books": {

@@ -54,7 +54,7 @@ seven tools, all schema-described — the agent sees every parameter inline.
 
 ### `scrape`
 
-only `url` is required. a bare call returns metadata + cleaned html — **markdown is opt-in**.
+only `url` is required. a bare call returns markdown + metadata — **cleaned html is opt-in**.
 
 ```jsonc
 {
@@ -85,7 +85,7 @@ only `url` is required. a bare call returns metadata + cleaned html — **markdo
 {
   "url": "https://shop.example.com/books/",
   "extract": {
-    "cleaned_html": false, "metadata": false,
+    "markdown": false, "metadata": false,
     "elements": {
       "heading": "h1",
       "books": {

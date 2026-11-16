@@ -17,7 +17,7 @@ new to crawlbrulee? read the **crawlbrulee** skill first. for the surrounding re
 
 **a screenshot always renders the page.** you don't need `require_js: true` to get one — asking for a capture implies rendering.
 
-**in rare cases we can't capture one.** what happens then depends on what else you asked for. if the screenshot was one output among several, it's best-effort: the `screenshot` field is left out of the payload and everything else still arrives — check the field is there before reading `url` off it. if the screenshot was the **only** output you requested, the call errors instead of returning an empty success: `unsupported_screenshot_output` (a 422) when the content type can't be screenshotted — json, plain text, markdown, xml — or a 500 when the capture itself failed. neither error is billed. the same rule applies to async jobs when you fetch the result.
+**in rare cases we can't capture one.** what happens then depends on what else you asked for. if the screenshot was one output among several, it's best-effort: the `screenshot` field is left out of the payload and everything else still arrives — check the field is there before reading `url` off it. if the screenshot was the **only** output you requested (every other format off: `markdown: false` and `metadata: false`, and no `cleaned_html`, `raw_html`, `links`, `images` or `elements`), the call errors instead of returning an empty success: `unsupported_screenshot_output` (a 422) when the content type can't be screenshotted — json, plain text, markdown, xml — or a 500 when the capture itself failed. neither error is billed. the same rule applies to async jobs when you fetch the result.
 
 ## options
 

@@ -32,7 +32,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 | field | type / values | default | notes |
 | --- | --- | --- | --- |
 | `url` | string | — | the url to scrape. http/https only. |
-| `extract` | object | `{ metadata, cleaned_html }` | which formats you want — see below |
+| `extract` | object | `{ markdown, metadata }` | which formats you want — see below |
 | `require_js` | boolean | `false` | render JavaScript in a headless browser |
 | `cleanup` | object | `{ ads_and_popups: true }` | what gets removed before any output is built — see below |
 | `proxy` | `basic` · `advanced` · `auto` | `auto` | see **crawlbrulee-api** |
@@ -53,24 +53,26 @@ for a background job instead of a blocking call, the body is identical — see *
 
 ## extract formats
 
-**this is the part people get wrong: `metadata` and `cleaned_html` are on by default; everything else is opt-in.** omitting `extract` entirely gives you those two.
+**this is the part people get wrong: `markdown` and `metadata` are on by default; everything else is opt-in.** omitting `extract` entirely gives you those two.
 
 | field | default | what you get |
 | --- | --- | --- |
 | `metadata` | **`true`** | the parsed `<head>` block — title, description, og/twitter tags, favicon |
-| `cleaned_html` | **`true`** | the page body with scripts, styles, ads and cookie banners removed |
-| `markdown` | `false` | clean markdown — the usual choice for llm/rag ingestion |
+| `markdown` | **`true`** | clean markdown — the usual choice for llm/rag ingestion |
+| `cleaned_html` | `false` | the page body with scripts, styles, ads and cookie banners removed |
 | `raw_html` | `false` | the unprocessed document |
 | `links` | `false` | the links on the page, up to a per-page cap |
 | `images` | `false` | inline images, up to a per-page cap |
 | `screenshot` | `false` | a capture — see **crawlbrulee-screenshots** |
 | `elements` | — | named values picked out by css selector, as json — see [below](#pulling-specific-values-elements) |
 
-naming any format does **not** switch the defaults off — `extract: { markdown: true }` gives you markdown *plus* metadata and cleaned html. set a default to `false` explicitly to drop it:
+naming any format does **not** switch the defaults off — `extract: { links: true }` gives you links *plus* markdown and metadata. set a default to `false` explicitly to drop it:
 
 ```jsonc
-"extract": { "markdown": true, "cleaned_html": false, "metadata": false }   // markdown only
+"extract": { "links": true, "markdown": false, "metadata": false }   // links only
 ```
+
+the same goes for a screenshot or `elements` on their own: send `markdown: false` and `metadata: false` with them.
 
 ## pulling specific values: `elements`
 
@@ -88,7 +90,7 @@ each key is a name you choose. the value is either a selector string (you get th
 
 ```jsonc
 "extract": {
-  "cleaned_html": false, "metadata": false,   // skip the defaults, keep just the values
+  "markdown": false, "metadata": false,   // skip the defaults, keep just the values
   "elements": {
     "heading": "h1",
     "books": {

@@ -40,7 +40,7 @@ crawlbrulee logout                   # remove stored credentials
 
 note the shape: **`scrape` is a command group, so scraping a url is `scrape url <url>`** — not `crawlbrulee scrape <url>`.
 
-**the cli defaults to markdown + metadata**, which differs from the api's own default of metadata + cleaned html. naming any extract flag replaces that default set, so pass every format you want.
+**the cli defaults to markdown + metadata**, the same as the api. the flags you pick replace that default: you get what you named plus metadata, so pass every format you want (`-l` alone gives links + metadata, no page body). `--no-metadata` drops the metadata.
 
 | flag | short | effect |
 | --- | --- | --- |

@@ -48,7 +48,7 @@ when an agent needs a few values from a page — prices, titles, links, a table'
 {
   "url": "https://shop.example.com/books/",
   "extract": {
-    "cleaned_html": false,
+    "markdown": false,
     "metadata": false,
     "elements": {
       "heading": "h1",
@@ -76,7 +76,7 @@ you can also copy any `skills/<name>/` folder into your agent's skills directory
 
 ## install as a plugin
 
-this repo is also a plugin. a plugin install gives you the same ten skills **plus** the crawlbrulee mcp server, wired to start with `npx -y @crawlbrulee/mcp@1.4.0` (each plugin release names one exact mcp version). these commands work straight from the repo — no store listing needed.
+this repo is also a plugin. a plugin install gives you the same ten skills **plus** the crawlbrulee mcp server, wired to start with `npx -y @crawlbrulee/mcp@1.5.0` (each plugin release names one exact mcp version). these commands work straight from the repo — no store listing needed.
 
 ```bash
 # Claude Code (and Claude Cowork)

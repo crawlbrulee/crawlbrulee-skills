@@ -102,7 +102,7 @@ but its types don't name them — upgrade rather than casting.
 const page = await cb.scrape({
   url: 'https://shop.example.com/books/',
   extract: {
-    cleaned_html: false,
+    markdown: false,
     metadata: false,
     elements: {
       heading: 'h1',
