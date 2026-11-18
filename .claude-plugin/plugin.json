@@ -1,7 +1,7 @@
 {
   "name": "crawlbrulee",
   "displayName": "crawlbrulee",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "EU-native web scraping for AI agents. one call turns any url into clean markdown, screenshots, metadata and links, or just the values you name by CSS selector, processed fully in the EU.",
   "author": {
     "name": "crawlbrulee",
@@ -23,15 +23,6 @@
     "web-data"
   ],
   "mcpServers": "./.mcp.json",
-  "userConfig": {
-    "api_key": {
-      "type": "string",
-      "title": "crawlbrulee api key",
-      "description": "your crawlbrulee api key, used by the bundled mcp server. get a free one at https://dashboard.crawlbrulee.com",
-      "sensitive": true,
-      "required": true
-    }
-  },
   "documentationUrl": "https://crawlbrulee.com/docs",
   "supportUrl": "https://github.com/crawlbrulee/crawlbrulee-skills/issues",
   "privacyPolicyUrl": "https://crawlbrulee.com/legal/privacy-policy",

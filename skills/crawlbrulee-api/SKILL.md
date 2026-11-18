@@ -33,7 +33,7 @@ export CRAWLBRULEE_API_KEY="cwbl_…"
 | POST | `/api/scrape/async` | submit a background scrape → `202 { job_id }` | **crawlbrulee-scrape-async** |
 | GET | `/api/scrape/status/{job_id}` | async job state | **crawlbrulee-scrape-async** |
 | GET | `/api/scrape/result/{job_id}` | async job result (same shape as a sync scrape) | **crawlbrulee-scrape-async** |
-| POST | `/api/map` | discover a site's urls | **crawlbrulee-map** |
+| POST | `/api/map` | discover a site's urls: pages and sitemap files, with their `lastmod` | **crawlbrulee-map** |
 | GET | `/api/usage` | billing-cycle snapshot | below |
 | GET | `/api/whoami` | org + token identity | below |
 
@@ -88,14 +88,14 @@ every successful scrape carries `response_meta.usage`, so you can see what the c
 
 - **`total_credit_cost`** is what you were charged for this call. read it instead of predicting it.
 - the other parts explain the price. this always holds: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`.
-- **`engine_credit_cost`** is the engine base: `1` for `http` (a plain fetch, no JavaScript ran), `3` for `browser` (the page was rendered, as with `require_js: true`), `5` for `screenshot` (a capture was made), `0` for `cache`. it is also `0` when the page is not billed.
+- **`engine_credit_cost`** is the engine base: `1` for `http` (a plain fetch, no JavaScript ran), `3` for `browser` (the page was rendered, as with `require_js: true`), `5` for `screenshot` (a screenshot or a pdf was made; a pdf costs what a screenshot costs, and a pdf and a screenshot in one request are billed once), `0` for `cache`. it is also `0` when the page is not billed. when a pdf you asked for can't be made, the request costs what it would cost without it. a dark-mode screenshot (`color_scheme: "dark"`) costs the same as a light one.
 - **`proxy_multiplier`** is `1` for `basic` and `5` for `advanced`. it is always there, even when the engine cost is `0`.
 - **`screenshot_slicing_credit_cost`** is `1` when this request cut a screenshot into slices, otherwise `0`. it is a flat +1, added after the multiplier, however many slices were made — also when `engine` is `cache`.
 - **`zero_data_retention_credit_cost`** is `1` when `zero_data_retention: true` added its credit to a billed, fresh result (see [zero data retention](#zero-data-retention)), otherwise `0`. it is always there; on an older response it is missing, which means `0`.
 - **`engine`** is the delivered engine. `engine: "cache"` identifies a cache hit.
 - **`proxy`** is the **resolved** tier. if you asked for `auto`, this tells you which tier ran. it is never `auto`.
 
-map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier + zero_data_retention_credit_cost`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
+map also carries `response_meta`, with `pagination`, `truncation`, and a usage block with the same fields minus slicing: `total_credit_cost`, `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`. for map, `total_credit_cost = engine_credit_cost × proxy_multiplier + zero_data_retention_credit_cost`. map `engine` is exactly `http` for fresh discovery or `cache` for a cached result; its resolved `proxy` is `basic` or `advanced`, never `auto`. a map with `modified_since` never uses the cache, so every such call is billed as a fresh map. `pagination` and `truncation` live **inside** `response_meta`, not at the top level.
 
 what a call costs is at <https://crawlbrulee.com/pricing>. treat that page as the source of truth — `response_meta.usage` tells you the rest after the fact.
 
@@ -152,9 +152,10 @@ things worth knowing about the cache key:
 
 - known tracking params are stripped before the page is fetched, so they never reach the target site; fragments and trailing slashes are normalized.
 - **every other query param is part of the key.** `?lang=en` and `?lang=fr` are separate entries — strip params you don't need before you send the url.
-- **screenshot settings are part of the key** — a different capture type, viewport, or device mode is a different entry.
+- **screenshot settings are part of the key** — a different capture type, viewport, device mode or `color_scheme` is a different entry.
+- **a pdf is cached like a screenshot.** a cached copy serves a pdf request only when it has a pdf made with the same settings (`layout`, `paper`, `landscape`, `media`, and with a screenshot the same device, viewport and `color_scheme`).
 - **`location.locale` is part of the key** (`location.country` is not) — a `de-DE` request never serves from an `en-US` entry.
-- **`extract` is NOT part of the key.** adding or dropping an output field (say `raw_html`) on an otherwise identical request still matches the same entry. `extract.elements` too: a cache hit reads your selectors from the cached page, and still costs 0.
+- **apart from the screenshot and pdf settings, `extract` is NOT part of the key.** adding or dropping an output field (say `raw_html`) on an otherwise identical request still matches the same entry. `extract.elements` too: a cache hit reads your selectors from the cached page, and still costs 0.
 - **`require_js: true` only matches entries that were rendered with JavaScript.**
 - **`cleanup` is part of the key**, so `ads_and_popups` and `exclude_selectors` both stay cacheable. requests with the same removals share an entry; different ones don't.
 - a screenshot with a non-zero `actions_before` wait or scroll disables caching.
@@ -190,7 +191,7 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `access_denied` | the token can't reach this resource |
 | `zero_data_retention_not_enabled` | HTTP 403 — you sent `zero_data_retention: true` but it is not enabled for your organization. not billed; send the request without it |
 | `not_found` | unknown async job id, or a job submitted more than 24 hours ago |
-| `too_many_requests` | you're going too fast, or the target site rate-limited us — back off, honoring `details.retry_after_ms` when it is there, and space out requests to that site |
+| `too_many_requests` | you're going too fast, or the target site rate-limited us (on map: on the file in `sitemap_url`, its robots.txt, or one of its top sitemap files) — back off, honoring `details.retry_after_ms` when it is there, and space out requests to that site |
 | `usage_allocation_error` | credit or concurrency cap — `details.reason` says which (`credit_limit`, `concurrency_limit`, `duplicate_reservation`, `internal_error`) |
 | `antibot_blocked` | the target's bot protection blocked us — verify your use is permitted and don't retry automatically |
 | `too_many_redirects` | the target redirected the request in a loop, or through more hops than we follow (HTTP 422) — the target's doing, not a bad request; retrying rarely helps |
@@ -198,15 +199,18 @@ non-2xx responses share one shape — a stable code in `name`, a human-readable 
 | `target_unreachable` | we could not reach the site at all (HTTP 502) — for example it did not answer in time, or its tls certificate was bad. no page came back, so there is no `page_status_code`. not billed. retrying later may help; if it keeps failing, check the url is right and the site is up |
 | `unsupported_content` | the page's content type can't be extracted (HTTP 415) |
 | `scrape_error` | most often: you asked for an async result before the job finished — poll `status` first. it can also mean we could not read your request, for example the body was not valid json |
-| `unsupported_screenshot_output` | the request asked only for a screenshot and the page's content type can't be screenshotted — request another format, or drop the screenshot |
+| `unsupported_screenshot_output` | the request asked only for a screenshot (or only for a screenshot and a pdf) and the page's content type can't be screenshotted — request another format, or drop the screenshot. an async job that asked the same ends `failed`, not billed, and fetching its result answers this same error |
+| `unsupported_pdf_output` | HTTP 422: the request asked only for a pdf and the page's content type (json, plain text, markdown, xml) can't be made into one. not billed; request another format, or drop the pdf. an async job that asked the same ends `failed`, not billed, and fetching its result answers this same error |
 | `request_timeout` | took too long — safe to retry |
-| `job_failed` | an async job ended in `failed` |
+| `job_failed` | an async job ended in `failed`. that includes a job that asked only for a screenshot or a pdf and got no capture: not billed, and a retry can work |
 | `internal_server_error` | something went wrong on our side — retry. it can also happen when the site could not be reached, so check the url is right and the site is up before you tell us |
 | `service_unavailable` | we couldn't look up your token or reach a dependency just then — your key is fine, back off and retry |
 
 `details` is only present on `too_many_requests` (`retry_after_ms`, `limited_by`) and `usage_allocation_error` (`reason` plus current-vs-max numbers). rate-limit headers ride on every response — `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `Retry-After` on a 429. read those rather than hardcoding a rate; the published limits are in [rate limits](https://crawlbrulee.com/docs/rate-limits).
 
 for general retrieval failures, `require_js: true` renders JavaScript content and `proxy: "advanced"` uses the higher-success proxy tier. an `antibot_blocked` response means the target's bot protection blocked us; it isn't a retry signal — a retry might succeed by applying more sophisticated parameters, i.e. the `advanced` proxy or `require_js: true`, but it isn't a guarantee. a `too_many_redirects` response (422) means the target redirected in a loop; that isn't one either — both `scrape` and `map` can return it. a `page_too_large` response (422) means the page's html was too large to process — terminal, so don't retry it; only `scrape` returns it. a `target_unreachable` response (502) means we could not reach the site at all — retry once after a pause, and stop if it keeps happening; both `scrape` and `map` can return it, though for `map` it is rare.
+
+a pdf or a screenshot that couldn't be made, next to other outputs, is not an error either: the scrape comes back without it, with `pdf_unavailable` or `screenshot_unavailable` in `warnings`. a `single_page` pdf taller than its page limit carries `pdf_single_page_overflow`. see **crawlbrulee-scrape** for every warning code.
 
 a page the site answered with an error status is **not** in this list: it is a `200` with `page_status_code`. a `5xx` page is often temporary on the site's side, and it costs 0, so a retry later is cheap. a `404` or `410` page is the site's real answer — retrying won't change it.
 

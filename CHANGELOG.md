@@ -4,13 +4,24 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
-## 1.4.1 (unreleased)
+## 1.5.0 (2026-11-18)
+
+### added
+
+- **pdf output: `extract.pdf`.** a scrape can save the page as a pdf: a real document with selectable text and working links. `{}` takes every default; `layout` (`pages` or `single_page`), `paper` (`a4` or `letter`), `landscape` and `media` (`screen` or `print`) set the rest. the result has a top-level `pdf` with a signed `url` that expires 24 hours after the scrape, and its size in `bytes`. it costs what a screenshot costs, and a pdf and a screenshot in one request are billed once. `crawlbrulee-scrape` has the options, the warnings `pdf_unavailable` and `pdf_single_page_overflow`, the new `422` `unsupported_pdf_output` for a pdf-only request whose content type can't be made into a pdf (not billed), and the cache rule. see [pdf](https://crawlbrulee.com/docs/scrape/pdf). also covered in `crawlbrulee-api`, `crawlbrulee-screenshots` and the overview in `crawlbrulee`.
+- **dark-mode screenshots: `extract.screenshot.color_scheme`.** `dark` asks the site for its dark theme; `light` is the default. no extra credits. a pdf in the same request shows the dark theme too. `crawlbrulee-screenshots` explains it.
+- **map: sitemaps one at a time, and what changed since a date.** every map now takes `sitemap_url` (read one sitemap file, on the same site or on a host the site's robots.txt names), `depth` (how many levels of nested sitemaps to read, `0` to `3`, default `3`), `entries` (`pages`, `sitemaps` or `all`) and `modified_since` (only entries whose `lastmod` is at or after a date), and every link is `{ url, type, lastmod }`. `crawlbrulee-map` teaches a plain map, listing a site's top sitemap files, reading one file, why a sitemap index at a low `depth` returns no pages, the three things to know about `modified_since`, and mapping a very large or deep site in several calls with `unread_sitemaps`. every skill now writes `max_results` and `total_before_max_results`, and `crawlbrulee-map` says which old names they replace and when those go. see [map](https://crawlbrulee.com/docs/map).
+- the cli, mcp, js sdk and python sdk skills say how to send these and where the results land (`@crawlbrulee/sdk` and `crawlbrulee` 1.5.0, `@crawlbrulee/mcp` 1.5.0, cli 5.5.0).
 
 ### changed
 
+- **the plugin connects to the hosted mcp server.** every plugin manifest now points at `https://api.crawlbrulee.com/mcp` instead of starting `@crawlbrulee/mcp` with `npx`. nothing runs on your machine, and the install no longer asks for an api key: the first time the agent uses the server, your host opens a crawlbrulee sign-in page in your browser, where you pick the organization to connect. the connection shows up with your other api tokens in the dashboard. want the local server instead? add `@crawlbrulee/mcp` yourself, as in [the mcp docs](https://crawlbrulee.com/docs/mcp).
+- **two mcp skills.** `crawlbrulee-mcp` is now about the hosted server: connecting it with a browser sign-in in each host, its seven tools, and what it does differently (no `headers`, `cookies`, `raw_html`, screenshot `viewport` and `actions`, or `webhook`; `map` returns 200 links a page by default; `scrape` gives up after about 50 seconds; errors come back as the api's error object). the new `crawlbrulee-mcp-local` has everything about the local `@crawlbrulee/mcp` server: the api key setup per host, the extra fields and its error codes. `crawlbrulee` points to the hosted server for the mcp tools and lists both. the bundle now has eleven skills.
+- `crawlbrulee-map` no longer says gzipped sitemaps (`.xml.gz`) can't be read: they are read on every map.
+- the readme names pdf output, dark-mode screenshots and the new map options in its skill table.
+- `crawlbrulee-screenshots`, `crawlbrulee-scrape`, `crawlbrulee-scrape-async`, `crawlbrulee-api` and both mcp skills say what happens to an async job that asks only for a screenshot or a pdf and gets none: it ends `failed`, not billed, and its result answers `job_failed`, or the same `422` as a sync scrape when the content type can't be captured.
 - **markdown is the default.** a scrape with no `extract`, or with flags left out, returns `markdown` + `metadata`, not `cleaned_html` + `metadata`. `crawlbrulee-scrape`, the overview in `crawlbrulee`, `crawlbrulee-mcp` and `crawlbrulee-sdk-python` say so. naming other formats keeps the two defaults on, so every "only these values" example now sends `markdown: false` and `metadata: false`.
 - `crawlbrulee-cli` no longer says the cli default differs from the api: both return markdown + metadata. it says that the flags you pick replace that default (cli 5.4.1), and the overview in `crawlbrulee` points there.
-- the plugin starts `@crawlbrulee/mcp` 1.5.0, which asks for markdown by default.
 - `crawlbrulee-screenshots` says what a screenshot-only request is: every other format off, `markdown` and `metadata` included, and no `elements`.
 
 ## 1.4.0 (2026-11-06)

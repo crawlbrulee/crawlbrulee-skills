@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-screenshots
-description: use when capturing a screenshot of a web page with crawlbrulee — viewport vs full-page, desktop vs mobile, custom viewport size and scale factor, ad and popup cleanup, scrolling or waiting before capture, slicing tall pages into tiles, and where the image url lands in the response.
+description: use when capturing a screenshot of a web page with crawlbrulee — viewport vs full-page, desktop vs mobile, light vs dark mode, custom viewport size and scale factor, ad and popup cleanup, scrolling or waiting before capture, slicing tall pages into tiles, and where the image url lands in the response.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -17,7 +17,7 @@ new to crawlbrulee? read the **crawlbrulee** skill first. for the surrounding re
 
 **a screenshot always renders the page.** you don't need `require_js: true` to get one — asking for a capture implies rendering.
 
-**in rare cases we can't capture one.** what happens then depends on what else you asked for. if the screenshot was one output among several, it's best-effort: the `screenshot` field is left out of the payload and everything else still arrives — check the field is there before reading `url` off it. if the screenshot was the **only** output you requested (every other format off: `markdown: false` and `metadata: false`, and no `cleaned_html`, `raw_html`, `links`, `images` or `elements`), the call errors instead of returning an empty success: `unsupported_screenshot_output` (a 422) when the content type can't be screenshotted — json, plain text, markdown, xml — or a 500 when the capture itself failed. neither error is billed. the same rule applies to async jobs when you fetch the result.
+**in rare cases we can't capture one.** what happens then depends on what else you asked for. if the screenshot was one output among several, the `screenshot` field is left out of the payload and everything else still arrives: check the field is there before reading `url` off it. if the screenshot was the **only** output you requested (every other format off: `markdown: false` and `metadata: false`, and no `cleaned_html`, `raw_html`, `links`, `images`, `elements` or `pdf`), the call errors instead of returning an empty success: `unsupported_screenshot_output` (a 422) when the content type can't be screenshotted (json, plain text, markdown, xml), or a 500 when the capture itself failed. neither error is billed. a request for only a screenshot and a pdf follows the same rule, and keeps `unsupported_screenshot_output`. an async job that asks only for a screenshot and gets none ends `failed` and is not billed; fetching its result answers the same `422` when the content type can't be screenshotted, or `400` `job_failed` when the capture failed.
 
 ## options
 
@@ -27,6 +27,7 @@ new to crawlbrulee? read the **crawlbrulee** skill first. for the surrounding re
 | --- | --- | --- | --- |
 | `type` | `viewport` · `full_page` | **required** | `viewport` = above the fold; `full_page` = the whole scrollable page |
 | `device_mode` | `desktop` · `mobile` | `desktop` | sets the user-agent and the default viewport |
+| `color_scheme` | `light` · `dark` | `light` | `dark` asks the site for its dark theme, see below |
 | `viewport` | `{ width, height, device_scale_factor }` | per `device_mode` | see below |
 | *(see `cleanup`, top level)* | object | **`{ ads_and_popups: true }`** | strips ads, cookie banners and popups before capture — a **top-level** field, not part of `screenshot` |
 | `actions_before` | array, max 5 | `[]` | scroll/wait the page into shape first |
@@ -35,6 +36,19 @@ new to crawlbrulee? read the **crawlbrulee** skill first. for the surrounding re
 **`viewport`** — if you pass the object at all, both `width` and `height` are required. they're integers in `[16, 10000]`. `device_scale_factor` is a number in `[1, 3]`, fractional allowed, default `1` — pass `2` for retina-density output. out-of-range values are rejected with a `400`.
 
 **`cleanup` is a top-level request field, not a screenshot one.** it used to live inside `screenshot`; sending it there now is a 400. `cleanup.ads_and_popups` defaults to `true`, so banners are removed unless you ask for them — set it `false` only when you specifically want them in frame. the same block also shapes `markdown`, `cleaned_html`, `links` and `images`, and never `raw_html`.
+
+## dark mode (`color_scheme`)
+
+`"color_scheme": "dark"` asks the site for its dark theme, if it has one, and the screenshot shows it:
+
+```jsonc
+"extract": { "screenshot": { "type": "full_page", "color_scheme": "dark" } }
+```
+
+- a site without a dark theme, or whose dark theme is only a switch on the page, looks the same as with `light`.
+- no extra credits.
+- when the request also asks for `extract.pdf`, the pdf is made from the same page, so it shows the dark theme too. a pdf with no screenshot is made with the light theme: the pdf has no color setting of its own. see **crawlbrulee-scrape**.
+- a dark capture and a light one are separate cache entries.
 
 ## scrolling and waiting before capture (`actions_before`)
 
@@ -120,12 +134,13 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 - **check before you read.** when you requested other outputs alongside the screenshot, a failed capture just leaves the `screenshot` field absent — guard for it rather than assuming. when the page came back without a capture, `warnings` has `screenshot_unavailable`. a screenshot-only request that can't deliver errors instead, so there you handle the error, not a missing field.
 - **check `page_status_code` too.** a page the site served with an error status is still a page, so you get a screenshot of it — a `404` page shoots like any other. look at the result's `page_status_code` before you treat the image as the page you wanted. see **crawlbrulee-scrape**.
 - **very long pages get capped.** we stop at a maximum capture height and flag it with a `screenshot_truncated` entry in the response's `warnings` array. if you see that code, the image and its slices stop at the cap.
-- **screenshot settings are part of the cache key.** the same url at a different capture type, viewport, or device mode is a different entry — changing any of them means a fresh fetch.
+- **screenshot settings are part of the cache key.** the same url at a different capture type, viewport, device mode or `color_scheme` is a different entry — changing any of them means a fresh fetch.
 - **lazy content missing?** add an `actions_before` scroll and a short wait, or set `require_js: true` when the content renders client-side.
 
 ## see also
 
 - the surrounding scrape: **crawlbrulee-scrape** · shared contract: **crawlbrulee-api**
+- the same page as a pdf document: `extract.pdf`, in **crawlbrulee-scrape**
 - for long captures, submit in the background: **crawlbrulee-scrape-async**
 - drive it from: **crawlbrulee-cli** (the `-ss` flag), **crawlbrulee-mcp**, **crawlbrulee-sdk-js**, **crawlbrulee-sdk-python**
 - docs: <https://crawlbrulee.com/docs/scrape/screenshots>

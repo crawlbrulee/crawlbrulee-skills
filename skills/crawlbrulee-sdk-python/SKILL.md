@@ -132,7 +132,7 @@ if page.screenshot:
 
 **a page the site served never raises, whatever its status.** a `404`, `410` or `503` page returns like any page, with the site's status in `page.page_status_code`. check it before you use the content — the markdown of a `404` page is the site's "not found" text. it is `None` when the response came from before the field existed; then the page was served normally.
 
-two more shapes to guard for: **`page.response_meta` is `Optional`** on a scrape (unlike `MapResponse.response_meta`, which is always there), and **`page.screenshot` is `Optional`** — when you requested other outputs too, a capture that couldn't be made leaves it `None` while the rest of the payload still arrives. a screenshot-only request that can't deliver raises instead (`error_name="unsupported_screenshot_output"` when the content type can't be screenshotted).
+two more shapes to guard for: **`page.response_meta` is `Optional`** on a scrape (unlike `MapResponse.response_meta`, which is always there), and **`page.screenshot` is `Optional`** — when you requested other outputs too, a capture that couldn't be made leaves it `None` while the rest of the payload still arrives. a screenshot-only request that can't deliver raises instead (`error_name="unsupported_screenshot_output"` when the content type can't be screenshotted). a pdf you asked for is `Optional` the same way, and a pdf-only request that can't deliver raises the same error class, with `error_name="unsupported_pdf_output"`.
 
 `page.response_meta.usage` has `total_credit_cost` (what the call cost) and its parts, with the parts adding up to it (formula below), plus `engine` and `proxy`. use `engine == "cache"` to identify a cache hit. `total_credit_cost` and `screenshot_slicing_credit_cost` are always set. `engine_credit_cost`, `proxy_multiplier` and `zero_data_retention_credit_cost` are `None` when the response doesn't send them; the formula is `total_credit_cost == engine_credit_cost * proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`.
 
@@ -187,6 +187,12 @@ page = client.scrape(
 ```
 
 `headers` is a name → value dict, `cookies` a list of dicts with `name` and `value`. both work on `scrape` and `scrape_async`, sync and async clients alike, not on `map`. headers go only to the origin of `url` (or its https version, for an http url), cookies only to its host; the request skips the cache and is billed as a normal fresh scrape. a header you can't set, or values over the limits, raises `ValidationError` (the message names the header). your own `User-Agent` adds `custom_user_agent` to `page.warnings`. see **crawlbrulee-scrape** and [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
+
+**a pdf, dark mode, and sitemaps one at a time** (needs `crawlbrulee` `1.5.0` or newer). they are the api's own fields:
+
+- `extract.pdf` on `scrape` and `scrape_async` saves the page as a pdf (every option has a default; `layout`, `paper`, `landscape`, `media` in **crawlbrulee-scrape**). the result's `pdf` has a signed `url` that expires 24 hours after the scrape, and `bytes`: download the file, don't keep the link. it costs what a screenshot costs.
+- `extract.screenshot.color_scheme="dark"` asks the site for its dark theme (see **crawlbrulee-screenshots**). no extra credits.
+- `map` takes `sitemap_url=`, `depth=`, `entries=`, `modified_since=` and `max_results=`: list a site's sitemap files, read one at a time, or get only what changed since a date. every link has `url`, `type` (`"page"` or `"sitemap"`) and `lastmod` (a utc date string or `None`), and `response_meta.truncation.unread_sitemaps` lists the files to read in further calls. see **crawlbrulee-map** for the levels and the several-calls flow.
 
 **zero data retention.** `zero_data_retention=True` is accepted on `scrape`, `scrape_async` and `map`, sync and async clients alike; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call raises `ZeroDataRetentionNotEnabledError` (needs `crawlbrulee` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 

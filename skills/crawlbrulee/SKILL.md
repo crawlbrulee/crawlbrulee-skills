@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee
-description: use when you need web data from a url with crawlbrulee — scraping a page into markdown or html, pulling its links or images, screenshotting it, or discovering which urls exist on a site. start here to learn what crawlbrulee does, set up the api key, and pick an interface (cli, mcp, js/ts sdk, python sdk, or raw http).
+description: use when you need web data from a url with crawlbrulee — scraping a page into markdown or html, pulling its links or images, screenshotting it, saving it as a pdf, or discovering which urls exist on a site. start here to learn what crawlbrulee does, set up the api key, and pick an interface (cli, mcp, js/ts sdk, python sdk, or raw http).
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -9,7 +9,7 @@ metadata:
 
 # 🍮 crawlbrulee
 
-crawlbrulee is a web-scraping api. you send a url, you get back clean structured data — markdown, cleaned html, raw html, the page's links and images, a screenshot, page metadata, and any values you name with css selectors. you can also enumerate the urls on a site (a "link map"). it's hosted in the EU and built for ai pipelines and agents.
+crawlbrulee is a web-scraping api. you send a url, you get back clean structured data — markdown, cleaned html, raw html, the page's links and images, a screenshot, a pdf, page metadata, and any values you name with css selectors. you can also enumerate the urls on a site (a "link map"). it's hosted in the EU and built for AI pipelines and agents.
 
 this skill gets you authenticated and pointed at the right interface. the deep dives live in their own skills.
 
@@ -17,10 +17,11 @@ this skill gets you authenticated and pointed at the right interface. the deep d
 
 | capability | what you get | skill |
 | --- | --- | --- |
-| **scrape** | fetch one url → markdown / cleaned html / raw html / links / images / screenshot / metadata, or just the values you name by css selector (`elements`) | **crawlbrulee-scrape** |
-| **screenshots** | viewport or full-page captures, desktop or mobile, tall pages sliced into tiles | **crawlbrulee-screenshots** |
+| **scrape** | fetch one url → markdown / cleaned html / raw html / links / images / screenshot / pdf / metadata, or just the values you name by css selector (`elements`) | **crawlbrulee-scrape** |
+| **pdf** | the page saved as a pdf document (`extract.pdf`), with selectable text and working links, as a signed link | **crawlbrulee-scrape** |
+| **screenshots** | viewport or full-page captures, desktop or mobile, light or dark (`color_scheme`), tall pages sliced into tiles | **crawlbrulee-screenshots** |
 | **async scrape** | submit a scrape as a background job; poll it, or get a webhook when it's done | **crawlbrulee-scrape-async** |
-| **map** | discover the urls on a site (sitemap + homepage links, deduped, paginated) | **crawlbrulee-map** |
+| **map** | discover the urls on a site (sitemap + homepage links, deduped, paginated): pages and sitemap files with their `lastmod`, one sitemap file at a time (`sitemap_url`), or only what changed since a date (`modified_since`) | **crawlbrulee-map** |
 | **account** | `usage` (credits, quota, concurrency) and `whoami` (which org/token you're on) | **crawlbrulee-api** |
 
 ## what crawlbrulee does not do
@@ -44,9 +45,9 @@ a person has to get the key and put it in place, not you. you guide them through
 2. **put it in the environment.** they add `export CRAWLBRULEE_API_KEY="cwbl_…"` to their shell profile (for example `~/.zshrc`), then start you again from a new terminal. never ask them to paste the key into the chat, and never print it or read it back: anything in the chat stays in its history.
 3. **check it.** use the `whoami` tool, `crawlbrulee whoami`, or `GET /api/whoami`. don't print the variable to check it.
 
-the cli, the sdks and curl then work as they are. the mcp server too, added with no key in its config. a few hosts (Codex, Gemini CLI, Cursor, Windsurf) need the variable named in their config file, and apps opened from the dock may need the key written into theirs: **crawlbrulee-mcp** has the file and the line for each.
+the cli, the sdks and curl then work as they are. the local mcp server too, added with no key in its config. a few hosts (Codex, Gemini CLI, Cursor, Windsurf) need the variable named in their config file, and apps opened from the dock may need the key written into theirs: **crawlbrulee-mcp-local** has the file and the line for each.
 
-your user can also skip the shell profile: in Claude Code, the plugin asks for the key in a masked prompt (`/plugin marketplace add crawlbrulee/crawlbrulee-skills`, then `/plugin install crawlbrulee@crawlbrulee`). or they write the key into the client's config themselves, in their own terminal or editor. not with Claude Code's `!` prefix: that adds the command and its output to the chat.
+for the mcp tools your user can skip the key: the hosted mcp server, `https://api.crawlbrulee.com/mcp`, signs them in through their browser instead. the crawlbrulee plugin connects to it (in Claude Code: `/plugin marketplace add crawlbrulee/crawlbrulee-skills`, then `/plugin install crawlbrulee@crawlbrulee`); **crawlbrulee-mcp** has the details. or they write the key into the client's config themselves, in their own terminal or editor. not with Claude Code's `!` prefix: that adds the command and its output to the chat.
 
 **if the key is missing**, your user needs to get one (point 1). **if the api says `invalid_credentials`**, the key is expired, revoked or mistyped: your user creates a new one under **tokens** and replaces the old one themselves. if they use the shell profile, they start you again afterwards.
 
@@ -54,12 +55,13 @@ keep keys out of source control. the cli can also store one for you: the user ru
 
 ## pick an interface
 
-all five reach the same api. pick by where the work happens:
+they all reach the same api. pick by where the work happens:
 
 | you are… | use | skill |
 | --- | --- | --- |
 | working in a shell, scripting, doing one-off scrapes — or an agent that prefers a cli | **cli** (`npx crawlbrulee`) | **crawlbrulee-cli** |
-| an ai agent that should call crawlbrulee as native tools | **mcp server** | **crawlbrulee-mcp** |
+| an AI agent that should call crawlbrulee as native tools | **hosted mcp server** (`https://api.crawlbrulee.com/mcp`, browser sign-in) | **crawlbrulee-mcp** |
+| the same, but you need your own headers and cookies, webhooks or raw html | **local mcp server** (`@crawlbrulee/mcp`, api key) | **crawlbrulee-mcp-local** |
 | building a Node.js / TypeScript / Deno / Bun app | **js/ts sdk** (`@crawlbrulee/sdk`) | **crawlbrulee-sdk-js** |
 | building a Python app, sync or async | **python sdk** (`crawlbrulee`) | **crawlbrulee-sdk-python** |
 | in any other language, or you want zero dependencies | **raw http** | **crawlbrulee-api** |
@@ -98,7 +100,7 @@ print(page.markdown)
 
 for mcp, configure the server once (see **crawlbrulee-mcp**) and the agent calls the `scrape` tool directly.
 
-> heads up: a bare scrape returns `markdown` + `metadata`. ask for `cleaned_html`, `links`, `images`, `raw_html`, or `screenshot` explicitly. in the api, the sdks and mcp, naming one keeps the two defaults on; set `markdown: false` or `metadata: false` to drop them. in the cli, the flags you pick replace the default (see **crawlbrulee-cli**).
+> heads up: a bare scrape returns `markdown` + `metadata`. ask for `cleaned_html`, `links`, `images`, `raw_html`, `screenshot`, or `pdf` explicitly. in the api, the sdks and mcp, naming one keeps the two defaults on; set `markdown: false` or `metadata: false` to drop them. in the cli, the flags you pick replace the default (see **crawlbrulee-cli**).
 
 ## need a few values, not the whole page?
 
@@ -132,7 +134,7 @@ a page the site really served is a successful scrape, whatever its status. a `40
 
 - **every response tells you what it cost.** scrape responses carry `response_meta.usage` with `total_credit_cost` (what the call cost) and the parts that make it up: `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost`, plus `engine` and the resolved `proxy`. map carries the same minus the slicing part, with `engine` limited to `http | cache` and `proxy` limited to `basic | advanced`. `engine: "cache"` identifies a cache hit. read it per call instead of guessing.
 - **check `usage` before a big job** to see remaining credits and your concurrency cap.
-- **cost depends on the delivered engine and resolved proxy tier**: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`; map has no slicing part. a fully cached repeat is free — 0 credits; a scrape cache hit that produces new slices costs the +1 slicing add-on. for what anything actually costs, see <https://crawlbrulee.com/pricing> — it's the single source of truth, so read it there rather than assuming.
+- **cost depends on the delivered engine and resolved proxy tier**: `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`; map has no slicing part. a fully cached repeat is free — 0 credits; a scrape cache hit that produces new slices costs the +1 slicing add-on. a pdf costs what a screenshot costs, and a pdf and a screenshot in one request are billed once. for what anything actually costs, see <https://crawlbrulee.com/pricing> — it's the single source of truth, so read it there rather than assuming.
 - **what gets billed:** we bill 2xx and 4xx pages, except 403, 407, 408, 429 and 451. 5xx pages are never billed, and errors are never billed. so a `404` page costs the same as any page; a `503` page costs 0.
 - **zero data retention is opt-in.** `zero_data_retention: true` keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). see **crawlbrulee-api**.
 - **cap your own fan-out.** there's no crawl endpoint, so a "crawl" is a loop you write — decide up front how many pages you'll scrape.
@@ -140,5 +142,5 @@ a page the site really served is a successful scrape, whatever its status. a `40
 ## see also
 
 - shared contract: **crawlbrulee-api** · capabilities: **crawlbrulee-scrape**, **crawlbrulee-screenshots**, **crawlbrulee-scrape-async**, **crawlbrulee-map**
-- interfaces: **crawlbrulee-cli**, **crawlbrulee-mcp**, **crawlbrulee-sdk-js**, **crawlbrulee-sdk-python**
+- interfaces: **crawlbrulee-cli**, **crawlbrulee-mcp**, **crawlbrulee-mcp-local**, **crawlbrulee-sdk-js**, **crawlbrulee-sdk-python**
 - docs: <https://crawlbrulee.com/docs> · dashboard & api keys: <https://dashboard.crawlbrulee.com> · pricing: <https://crawlbrulee.com/pricing>

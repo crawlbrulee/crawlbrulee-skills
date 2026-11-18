@@ -85,6 +85,7 @@ console.log(usage.total_credit_cost, 'credits', usage.engine, usage.proxy)
 - **`page.response_meta` is required** — no guard needed to read `page.response_meta.usage`.
 - **`page.response_meta.usage`** has `total_credit_cost` (what the call cost) and its parts: `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost`, with `total_credit_cost = engine_credit_cost × proxy_multiplier + screenshot_slicing_credit_cost + zero_data_retention_credit_cost`. `engine` is `http`, `browser`, `screenshot`, or `cache`; use `engine === 'cache'` to identify a cache hit. the new fields are optional in the types because older responses don't send them.
 - **`page.screenshot` is optional.** when you requested other outputs too, a capture that couldn't be made omits the field while the rest of the payload still arrives — guard with `page.screenshot?.url`. a screenshot-**only** request that can't deliver throws instead (`errorName: 'unsupported_screenshot_output'` when the content type can't be screenshotted).
+- **`page.pdf` is optional too**, for the same reason: guard with `page.pdf?.url`. a pdf-**only** request that can't deliver throws the same error class as a screenshot-only one, with `errorName: 'unsupported_pdf_output'`.
 
 `map()` returns `MapUsage` under `response_meta.usage`: `total_credit_cost`,
 `engine_credit_cost`, `proxy_multiplier`, `zero_data_retention_credit_cost`, `engine`, `proxy`.
@@ -134,6 +135,12 @@ const page = await cb.scrape({
 ```
 
 `headers` is a name → value object, `cookies` a list of `{ name, value }`. both work on `scrape()` and `scrapeAsync()`, not on `map()`. headers go only to the origin of `url` (or its https version, for an http url), cookies only to its host; the request skips the cache and is billed as a normal fresh scrape. a header you can't set, or values over the limits, throws `ValidationError` (the message names the header). your own `User-Agent` adds `custom_user_agent` to `page.warnings`. see **crawlbrulee-scrape** and [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
+
+**a pdf, dark mode, and sitemaps one at a time** (needs `@crawlbrulee/sdk` `1.5.0` or newer). the request objects take the api's own fields:
+
+- `extract.pdf` on `scrape()` and `scrapeAsync()` saves the page as a pdf (`{}` for every default; `layout`, `paper`, `landscape`, `media` in **crawlbrulee-scrape**). the result's `pdf` has a signed `url` that expires 24 hours after the scrape, and `bytes`: download the file, don't keep the link. it costs what a screenshot costs.
+- `extract.screenshot.color_scheme: 'dark'` asks the site for its dark theme (see **crawlbrulee-screenshots**). no extra credits.
+- `map()` takes `sitemap_url`, `depth`, `entries`, `modified_since` and `max_results`: list a site's sitemap files, read one at a time, or get only what changed since a date. every link is `{ url, type, lastmod }` (`type` is `'page'` or `'sitemap'`, `lastmod` a utc date string or `null`), and `response_meta.truncation.unread_sitemaps` lists the files to read in further calls. see **crawlbrulee-map** for the levels and the several-calls flow.
 
 **zero data retention.** `zero_data_retention: true` is accepted on `scrape()`, `scrapeAsync()` and `map()`; it keeps the result out of the shared cache (anything stored to deliver it is kept for 24 hours, then deleted) and adds 1 credit. it must be enabled for your organization, otherwise the call throws `ZeroDataRetentionNotEnabledError` (needs `@crawlbrulee/sdk` `1.2.0` or newer). see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
@@ -234,5 +241,5 @@ the per-call `timeoutMs` and your `signal` compose — whichever fires first win
 ## see also
 
 - what the api does: **crawlbrulee-api**, **crawlbrulee-scrape**, **crawlbrulee-screenshots**, **crawlbrulee-scrape-async**, **crawlbrulee-map**
-- the Python equivalent: **crawlbrulee-sdk-python** · built on this sdk: **crawlbrulee-cli**, **crawlbrulee-mcp**
+- the Python equivalent: **crawlbrulee-sdk-python** · built on this sdk: **crawlbrulee-cli**, **crawlbrulee-mcp-local**
 - docs: <https://crawlbrulee.com/docs/sdks/javascript-typescript>

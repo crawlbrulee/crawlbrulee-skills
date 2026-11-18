@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-scrape
-description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or sending your own headers and cookies with the request. covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
+description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or saving the page as a pdf, or sending your own headers and cookies with the request. covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -45,7 +45,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 
 `max_age` is the only cache field — `cache` rejects anything else.
 
-**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry. a request with `headers` or `cookies` skips the cache entirely (see [below](#headers-and-cookies)).
+**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry. the screenshot and pdf settings are the exception: a cached copy serves them only when it was made with the same settings (see **crawlbrulee-screenshots** and [the pdf section](#saving-the-page-as-a-pdf)). a request with `headers` or `cookies` skips the cache entirely (see [below](#headers-and-cookies)).
 
 **`zero_data_retention: true`** goes at the top level of the body, not inside `cache`. keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
@@ -64,6 +64,7 @@ for a background job instead of a blocking call, the body is identical — see *
 | `links` | `false` | the links on the page, up to a per-page cap |
 | `images` | `false` | inline images, up to a per-page cap |
 | `screenshot` | `false` | a capture — see **crawlbrulee-screenshots** |
+| `pdf` | — | the page as a pdf document, as a signed link. see [below](#saving-the-page-as-a-pdf) |
 | `elements` | — | named values picked out by css selector, as json — see [below](#pulling-specific-values-elements) |
 
 naming any format does **not** switch the defaults off — `extract: { links: true }` gives you links *plus* markdown and metadata. set a default to `false` explicitly to drop it:
@@ -72,7 +73,7 @@ naming any format does **not** switch the defaults off — `extract: { links: tr
 "extract": { "links": true, "markdown": false, "metadata": false }   // links only
 ```
 
-the same goes for a screenshot or `elements` on their own: send `markdown: false` and `metadata: false` with them.
+the same goes for a screenshot, a pdf or `elements` on their own: send `markdown: false` and `metadata: false` with them.
 
 ## pulling specific values: `elements`
 
@@ -132,6 +133,42 @@ the result has a top-level `elements` with the same names:
 
 the full rules and limits are in the docs: [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
+## saving the page as a pdf
+
+`extract.pdf` saves the page as a real pdf document: selectable text, working links, backgrounds printed, and no header or footer added. send `{}` for every default. it works on a sync scrape and on an async job.
+
+```jsonc
+"extract": {
+  "markdown": false, "metadata": false,   // a pdf-only request
+  "pdf": { "layout": "pages", "paper": "a4", "landscape": false, "media": "screen" }
+}
+```
+
+| key | values | default | what it does |
+| --- | --- | --- | --- |
+| `layout` | `pages` · `single_page` | `pages` | `pages`: the page on sheets of paper, laid out as in the browser window and shrunk to fit the paper width. `single_page`: one page as wide as the browser window and as tall as the web page, up to 15,000 px; a taller page goes on over more pages, with the `pdf_single_page_overflow` warning |
+| `paper` | `a4` · `letter` | `a4` | only with `layout: "pages"` |
+| `landscape` | boolean | `false` | turn the paper sideways. only with `layout: "pages"` |
+| `media` | `screen` · `print` | `screen` | `print` uses the site's own print style, which on many sites hides menus and images; a site without one looks as on screen |
+
+the result has a top-level `pdf`:
+
+```jsonc
+"pdf": {
+  "url": "https://cdn.crawlbrulee.com/…/page.pdf?token=…&expires=…",  // signed link
+  "bytes": 184320                                                     // size of the file
+}
+```
+
+- **download the file, don't keep the link.** the link is signed and expires 24 hours after the scrape (for an async job, 24 hours after you submitted it; fetching the result again doesn't extend it). use it exactly as returned.
+- **it runs in a browser** and costs what a screenshot costs (the `screenshot` engine, 5 credits before the proxy multiplier). a pdf and a screenshot in one request are billed once. when the pdf can't be made, the request costs what it would cost without it.
+- **with a screenshot in the same request,** both come from the same page in the same browser window: the pdf uses the screenshot's device and viewport, and its `color_scheme`, so a dark screenshot gives a dark pdf. in a request with a pdf and no screenshot, the pdf is made with the light theme.
+- **no pdf came back?** in rare cases the pdf can't be made: it would be over 50 MB, it takes too long, or the page didn't load. the rest of the scrape comes back, `pdf` is left out, and `warnings` has `pdf_unavailable`. a pdf-only request fails instead: `422` `unsupported_pdf_output` when the content type (json, plain text, markdown, xml) can't be made into a pdf, or `500` when making it failed. neither is billed. a request for only a screenshot and a pdf gets `422` `unsupported_screenshot_output` instead. an async job that asks only for a pdf and gets none ends `failed`, not billed: its result answers the same `422`, or `400` `job_failed` when making the pdf failed.
+- `paper` or `landscape` with `layout: "single_page"` is a `400` `validation_error`, not billed.
+- **cache:** a cached copy answers only when it has a pdf made with the same settings (`layout`, `paper`, `landscape`, `media`, and with a screenshot the same device, viewport and `color_scheme`). `cache.max_age: 0` always makes a new one.
+
+the full rules are in the docs: [pdf](https://crawlbrulee.com/docs/scrape/pdf).
+
 ## trimming the page
 
 `cleanup` says what comes off the page before anything is built from it:
@@ -149,7 +186,7 @@ the full rules and limits are in the docs: [targeted extraction](https://crawlbr
 
 three things to know:
 
-- it shapes `markdown`, `cleaned_html`, `links`, `images` and the screenshot.
+- it shapes `markdown`, `cleaned_html`, `links`, `images`, the screenshot and the pdf.
 - it **never** touches `raw_html`. that is always the page as it arrived, before anything was removed — so you can always get back what we started from.
 - both settings are part of the cache key, so both stay cacheable. requests with the same `exclude_selectors` share a cache entry; different ones don't.
 
@@ -194,6 +231,7 @@ fields you didn't request are simply absent.
   "links": [{ "text": "Home", "href": "https://example.com/", "internal": true }],
   "images": [{ "url": "https://example.com/a.png?v=2", "alt": "…" }],
   "screenshot": { /* see crawlbrulee-screenshots */ },
+  "pdf": { "url": "…", "bytes": 184320 },  // only if you asked for a pdf
   "metadata": { "title": "…", "description": "…", "og_title": "…", "favicon_url": "…" },
   "elements": { "heading": "Books", "books": [ /* … */ ] },  // only if you asked for elements
   "unsupported_fields": [],
@@ -232,8 +270,9 @@ stable string codes for things worth flagging on an otherwise successful scrape.
 | `inline_images_truncated` | the page had more inline images than we return for one page |
 | `raw_html_truncated` | the document was larger than the `raw_html` budget |
 | `elements_truncated` | an `elements` value hit a limit: a list was cut at 1,000 matches, or the request reached its match or size limit (a value that didn't fit is `null`, never cut short) |
+| `pdf_single_page_overflow` | a `single_page` pdf was taller than the 15,000 px page limit, so it goes on over more pages |
 
-every one of them means you still got the output, cut at the ceiling — never a silent trim (an `elements` value too big to fit is the one exception: it comes back `null`). the current ceilings live in the [docs](https://crawlbrulee.com/docs/scrape).
+every one of them means you still got the output, cut at the ceiling — never a silent trim (an `elements` value too big to fit is the one exception: it comes back `null`; and an overflowing pdf is whole, only on more pages). the current ceilings live in the [docs](https://crawlbrulee.com/docs/scrape).
 
 a second family means that section's extraction failed, so the field came back omitted or empty while the rest of the scrape succeeded:
 
@@ -243,6 +282,7 @@ a second family means that section's extraction failed, so the field came back o
 | `inline_images_unavailable` | image extraction failed — `images` is omitted or empty |
 | `metadata_unavailable` | metadata extraction failed — `metadata` is omitted or empty |
 | `screenshot_unavailable` | a screenshot was asked for, but the page came back from the `http` engine without one — `screenshot` is omitted |
+| `pdf_unavailable` | a pdf was asked for, but the page came back without one; `pdf` is omitted |
 
 **an empty field carrying one of these does not mean the page had none.** that's the whole point of the code — it separates "we couldn't read them" from "there weren't any". don't report the absence as a finding; re-run the scrape. an empty field with no such warning is a real absence.
 

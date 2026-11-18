@@ -5,7 +5,6 @@ license: Apache-2.0
 metadata:
   author: crawlbrulee
   homepage: https://crawlbrulee.com
-allowed-tools: Bash(crawlbrulee:*) Bash(npx crawlbrulee:*)
 ---
 
 # 🍮 crawlbrulee cli
@@ -156,6 +155,10 @@ crawlbrulee scrape url https://x.com -ss full,1280,720,desktop,800   # sliced in
 
 see **crawlbrulee-screenshots** for what the options mean and what comes back.
 
+### a pdf, and dark-mode screenshots
+
+cli `5.5.0` adds the api's `extract.pdf` (the page saved as a pdf, see **crawlbrulee-scrape**) and `extract.screenshot.color_scheme` (`light` or `dark`, see **crawlbrulee-screenshots**). read the pdf from the json: `--json | jq -r .pdf.url` prints its signed link, and `.pdf.bytes` its size. the link expires 24 hours after the scrape, so download the file right away (`curl -o page.pdf "$(… --json | jq -r .pdf.url)"`), and use the link exactly as printed. a pdf costs what a screenshot costs. when no pdf came back, `warnings` has `pdf_unavailable`; a pdf-only request fails with `unsupported_pdf_output` when the content type can't be made into a pdf, not billed.
+
 ## async jobs
 
 submit in the background instead of holding the connection open — good for heavy js rendering or long-page screenshots. `--async` prints a `job_id` and exits; add `--wait` to poll to completion and print the result in one command.
@@ -201,9 +204,13 @@ crawlbrulee map https://example.com --text > urls.txt   # one url per line
 | flag | effect |
 | --- | --- |
 | `--limit <n>` | page size — how many of the collected urls come back in **this** response, default `5000`, max `10000`. it is not how many urls get collected |
-| `--max-urls <n>` | total urls to collect, default `5000`, api max `100000` |
+| `--max-results <n>` | total entries to collect, counting only the kind in `--entries`, default `5000`, api max `100000` |
+| `--sitemap-url <url>` | read this one sitemap file (on the same site, or on a host the site's robots.txt names) instead of starting from the site's top sitemap files |
+| `--depth <n>` | levels of nested sitemaps to read, `0` to `3`, default `3`. `0` without `--sitemap-url` lists the site's top sitemap files without reading them |
+| `--entries <kind>` | `pages` (default) · `sitemaps` · `all` |
+| `--modified-since <date>` | only entries whose `lastmod` is at or after this date (`2026-11-01`, or a date and time with a zone). never served from the cache |
 | `--page <n>` | page number (1-indexed) |
-| `--sitemap-only` | use `sitemap.xml` only, skip homepage extraction |
+| `--sitemap-only` | use the sitemaps only, leave out the links found on the home page |
 | `--internal-only` | same-domain links only |
 | `--external-only` | external-domain links only |
 | `--no-subdomains` | exclude subdomains from internal results |
@@ -215,15 +222,32 @@ crawlbrulee map https://example.com --text > urls.txt   # one url per line
 
 `--internal-only` and `--external-only` can't be combined. **there's no `--locale` on map** — it's a scrape-only option.
 
-### a map collects at most `max_urls` urls
+### a map collects at most `--max-results` entries
 
-`--limit` only trims *this response*; page for the rest and nothing is lost. `max_urls` is the collection ceiling — discovery **stops** there, so urls past it are never collected and no amount of paging brings them back. both default to `5000`.
+`--limit` only trims *this response*; page for the rest and nothing is lost. `--max-results` is the collection ceiling — discovery **stops** there, so urls past it are never collected and no amount of paging brings them back. both default to `5000`.
 
-`--max-urls` needs cli `4.3.0` or newer. on an older cli every map tops out at 5000 urls and the flag fails with `unknown option`; check with `crawlbrulee --version` and upgrade.
+`--max-results` needs cli `5.5.0`; on an older cli use `--max-urls`.
 
-raising `max_urls` doesn't cost extra credits by itself. but a cached map built under a smaller budget can't answer a bigger request, so the retry re-runs discovery and is billed as a fresh map.
+raising `--max-results` doesn't cost extra credits by itself. but a cached map built under a smaller budget can't answer a bigger request, so the retry re-runs discovery and is billed as a fresh map.
 
-**a capped map looks complete.** with the ceiling at 5000, a big site returns exactly 5000 urls and the text output says nothing about it. read the json to be sure — `crawlbrulee map <url> --json | jq .response_meta.truncation`. `discovery_cap_reason` is the field: `null` means the list is whole, `"max_urls"` is the one reason worth retrying with a bigger ceiling, `"unread_files"` means some sitemap files couldn't be read this time (often transient — a retry soon may return more, since a map with this reason is cached for only 15 minutes instead of the usual window — but if it keeps happening the site is publishing something we can't read), and `time` · `file_budget` · `depth` · `file_size` mean a bigger ceiling changes nothing. see **crawlbrulee-map**.
+**a capped map looks complete.** with the ceiling at 5000, a big site returns exactly 5000 urls. read the json to be sure — `crawlbrulee map <url> --json | jq .response_meta.truncation`. `discovery_cap_reason` is the field: `null` means the list is whole, `"max_results"` is the one reason worth retrying with a bigger ceiling, `"depth"` means sitemap files lie below `--depth` (read them with `--sitemap-url`), `"unread_files"` means some sitemap files couldn't be read whole this time (often transient, so a retry soon may return more; but if it keeps happening the site is publishing something we can't read), and `time` · `file_budget` · `file_size` mean a bigger ceiling changes nothing. see **crawlbrulee-map**.
+
+### sitemaps one at a time (cli `5.5.0`)
+
+```bash
+crawlbrulee map https://example.com --depth 0 --entries sitemaps        # the site's top sitemap files
+crawlbrulee map https://example.com --sitemap-url https://example.com/sitemap-products.xml
+crawlbrulee map https://example.com --modified-since 2026-11-01         # only what changed since then
+```
+
+in text mode a plain map stays one url per line, so it pipes straight into the next command. with `--entries all`, where pages and sitemap files mix, each line is `<type> <lastmod> <url>` (`-` for no date). when a call left sitemap files unread, the text ends with them as `#` comment lines: try each one next with `--sitemap-url`. in json every link is `{ url, type, lastmod }`:
+
+```bash
+crawlbrulee map https://example.com --entries sitemaps --json | jq -r '.links[].url'   # sitemap files to read next
+crawlbrulee map https://example.com --json | jq -r '.response_meta.truncation.unread_sitemaps[]'
+```
+
+a sitemap index holds only sitemap files, so reading one at a low `--depth` with the default `--entries pages` returns no pages: use `--entries sitemaps` or a higher `--depth`. `--modified-since` leaves out every entry with no `lastmod`, and every call (every `--page` too) is billed as a fresh map. a `429` from the site on the file in `--sitemap-url` or on a top sitemap file ends the map with `too_many_requests`, not billed: wait, then run it again. the whole several-calls flow is in **crawlbrulee-map**.
 
 ## `usage` and `whoami`
 
