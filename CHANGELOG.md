@@ -4,7 +4,7 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
-## unreleased
+## 1.6.0 (2026-11-20)
 
 ### changed
 
