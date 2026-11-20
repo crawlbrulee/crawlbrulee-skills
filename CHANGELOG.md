@@ -4,6 +4,14 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## unreleased
+
+### changed
+
+- **map** (crawlbrulee-map, crawlbrulee-api, crawlbrulee-cli, crawlbrulee-mcp, crawlbrulee-mcp-local, the sdk skills): a sitemap file the map found to be a sitemap index comes back as type `sitemap_index`. with `modified_since`, every sitemap file is read whatever its own date, and each entry is judged by its own `lastmod`. a large site is mapped in several calls, starting with `depth: 1` and `entries: "sitemaps"`.
+- **a page with status `444` is not billed** (crawlbrulee-api, crawlbrulee-scrape, crawlbrulee-mcp, crawlbrulee-mcp-local).
+- **`proxy: "auto"` and `require_js`** (crawlbrulee-api, crawlbrulee-scrape, crawlbrulee-mcp, crawlbrulee-mcp-local): `auto`, the default, starts with the lightest way to get the page and steps up on its own when a site needs more: a stronger proxy, a real browser, or both. `require_js: true` goes straight to a browser; without it, a page that needs one still gets one.
+
 ## 1.5.0 (2026-11-18)
 
 ### added

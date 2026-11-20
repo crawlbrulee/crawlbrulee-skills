@@ -63,7 +63,7 @@ a non-2xx from us means something else: the request was wrong, we could not reac
 
 errors are never billed. for a page the site served, the page's status decides:
 
-- **we bill 2xx and 4xx pages, except 403, 407, 408, 429 and 451.**
+- **we bill 2xx and 4xx pages, except 403, 407, 408, 429, 444 and 451.**
 - **5xx pages are never billed.**
 
 so a `404` or `410` page costs the same as any page, and a `503` page costs 0. an unbilled page still comes back as a `200` with its content. its `total_credit_cost`, `engine_credit_cost`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost` are all `0`, while `engine`, `proxy` and `proxy_multiplier` still show how it was fetched.
@@ -123,7 +123,7 @@ when it is not enabled, the request fails with a `403` `zero_data_retention_not_
 
 - **`basic`** — the standard pool. right for most pages.
 - **`advanced`** — enhanced proxy tier with a higher success rate.
-- **`auto`** (default) — starts on `basic` and escalates to `advanced` if that doesn't deliver. you're billed at whichever tier delivered.
+- **`auto`** (default) — starts with the lightest way to get the page and steps up on its own when a site needs more: a stronger proxy, a real browser, or both (a map steps up the proxy only). you're billed at whichever tier delivered.
 
 `auto` reserves against the worst-case tier up front, so a low balance can reject an `auto` request that would ultimately have been cheap. pin `basic` when you know a page is easy and you're watching your balance.
 

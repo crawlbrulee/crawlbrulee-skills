@@ -9,7 +9,7 @@ metadata:
 
 # 🍮 crawlbrulee map
 
-map enumerates the urls on a site. it reads the site's sitemaps and the links on its home page, dedupes the result, and paginates it. every link is `{ url, type, lastmod }`: a page or a sitemap file, with the date the sitemap gives. use it to plan what to scrape.
+map enumerates the urls on a site. it reads the site's sitemaps and the links on its home page, dedupes the result, and paginates it. every link is `{ url, type, lastmod }`: a page, a sitemap file or a sitemap index, with the date the sitemap gives. use it to plan what to scrape.
 
 new to crawlbrulee? read the **crawlbrulee** skill first. for the shared bits — auth, proxies, caching, errors — read **crawlbrulee-api**.
 
@@ -37,7 +37,7 @@ curl -X POST https://api.crawlbrulee.com/api/map \
 | `url` | string | — | any url on the site — see normalization below |
 | `sitemap_url` | full http or https address | — | start from this sitemap file. it must be on the same site as `url`, or on a host the site's robots.txt names (a CDN, say); a file on another host that robots.txt does not name is a `400`. to read a file on another site, map that site. left out: start from the site's top sitemap files |
 | `depth` | integer, `0` to `3` | `3` | how many levels of nested sitemaps to read, see [levels](#how-a-map-reads-sitemaps). a higher value gets a `400` `validation_error` |
-| `entries` | `pages` · `sitemaps` · `all` | `pages` | what to return: page addresses, sitemap files, or both |
+| `entries` | `pages` · `sitemaps` · `all` | `pages` | what to return: page addresses, sitemap files (type `sitemap` or `sitemap_index`), or both |
 | `modified_since` | a date (`2026-11-01`, the start of that day in utc) or an iso-8601 datetime with a zone | — | only entries whose `lastmod` is at or after it. see [what changed](#what-changed-since-a-date) |
 | `max_results` | integer | `5000` | the most entries the map finds, counting only the kind in `entries`, max `100000` — discovery **stops** here |
 | `sitemap_only` | boolean | `false` | leave out the links found on the home page |
@@ -82,7 +82,8 @@ level 3       https://example.com/sitemaps/products-1.xml.gz   pages
 ```
 
 - a file at level N is read only when N ≤ `depth`. the default `depth: 3` reads the top files and two nested levels. that is a **plain map** (`{ "url": … }`), which returns pages.
-- **with `sitemap_url`, level 0 is that file, and it is read.** without it, level 0 is only the list of top files, which `depth: 0` returns without reading them.
+- **with `sitemap_url`, level 0 is that file, and it is read.** without it, level 0 is only the list of top files, which `depth: 0` returns without reading their entries. a top file found at one of the usual addresses can still come back as `sitemap_index`, because finding it shows its kind.
+- `depth: 1` reads the top files, so a map with `entries: "sitemaps"` returns them and every file they list, in one call.
 - a sitemap file below `depth` is not read. it lands in `response_meta.truncation.unread_sitemaps`, and `discovery_cap_reason` is `"depth"`. that is the answer to the depth you asked for, **not a fault**: read those files with `sitemap_url` in more calls.
 - `max_results` counts only the kind in `entries`.
 
@@ -94,21 +95,25 @@ level 3       https://example.com/sitemaps/products-1.xml.gz   pages
 
 returns pages from the sitemaps and the home page. a home page link is `{ "type": "page", "lastmod": null }`.
 
-### 2. list a site's top sitemap files
+### 2. list a site's sitemap files
 
 ```json
-{ "url": "https://example.com", "depth": 0, "entries": "sitemaps" }
+{ "url": "https://example.com", "depth": 1, "entries": "sitemaps" }
 ```
 
 ```jsonc
 "links": [
-  { "url": "https://example.com/sitemap_index.xml", "type": "sitemap", "lastmod": null },
-  { "url": "https://example.com/sitemap-news.xml", "type": "sitemap", "lastmod": null }
+  { "url": "https://example.com/sitemap_index.xml", "type": "sitemap_index", "lastmod": null },
+  { "url": "https://example.com/sitemap-news.xml", "type": "sitemap", "lastmod": null },
+  { "url": "https://example.com/sitemap-pages.xml", "type": "sitemap", "lastmod": "2026-11-10T00:00:00.000Z" },
+  { "url": "https://example.com/sitemap-products.xml", "type": "sitemap", "lastmod": "2026-11-12T00:00:00.000Z" }
 ]
-// truncation: discovery_cap_reason "depth", and both files in unread_sitemaps: expected, they weren't read
+// truncation: discovery_cap_reason "depth", and the two files from the index in unread_sitemaps: expected, they weren't read
 ```
 
-top files have no `lastmod`.
+the top files come back with the files they list. `sitemap_index` marks a file this map found to be an index. a listed file shows as `sitemap` until a map reads it, even when it is an index itself: `sitemap-products.xml` above is one. to go deeper, read a listed file with `sitemap_url`, or ask with a higher `depth`. top files have no `lastmod`; a file listed in an index has the date the index gives.
+
+`{ "url": …, "depth": 0, "entries": "sitemaps" }` returns only the top files.
 
 ### 3. read one sitemap file
 
@@ -126,7 +131,7 @@ a sitemap index holds only sitemap files. read one at a low `depth` with the def
 { "url": "https://example.com", "sitemap_url": "https://example.com/sitemap-products.xml", "depth": 0 }
 ```
 
-the answer doesn't say "this was an index": an empty `links`, `discovery_cap_reason: "depth"` and the index's files in `unread_sitemaps` are the sign. ask again with `entries: "sitemaps"` (or `"all"`) to get those files as links, or with a higher `depth` to read them. a plain map of a site whose pages sit more than three levels down does the same.
+with `entries: "pages"`, the answer doesn't say "this was an index": an empty `links`, `discovery_cap_reason: "depth"` and the index's files in `unread_sitemaps` are the sign. a link of type `sitemap_index` in an earlier map tells you before you ask, when a map opened it: a file it only listed shows as `sitemap`. ask again with `entries: "sitemaps"` (or `"all"`) to get those files as links, or with a higher `depth` to read them. a plain map of a site whose pages sit more than three levels down does the same.
 
 ### what changed since a date
 
@@ -137,16 +142,16 @@ the answer doesn't say "this was an index": an empty `links`, `discovery_cap_rea
 returns only entries whose `lastmod` is at or after the date. three things to know:
 
 1. **an entry with no `lastmod` is left out**, so every entry returned matches. home page links have no `lastmod`, so none comes back; a site whose sitemaps give no dates returns nothing.
-2. **a nested sitemap whose own `lastmod` is older is not read.** a site that doesn't update the dates in its index when a page changes can hide changed pages this way. if you don't trust its dates, map without `modified_since` and compare `lastmod` yourself.
+2. **every sitemap file is read, whatever its own `lastmod`.** each entry returned, a page or a sitemap file, is judged by its own `lastmod`. so with `entries: "sitemaps"`, a file comes back when its own date matches, not when a page in it changed. to find the pages that changed, ask with `entries: "pages"` (the default).
 3. **it always runs fresh**: it never reads from or adds to the cache, so `cache.max_age` does nothing and every call, every `page` too, is billed as a fresh map. set a large `limit`.
 
 ### a very large or deep site in several calls
 
 one call stops at `max_results` (at most `100000`), at its own time and file limits, and at its `depth` (at most `3`). for anything bigger, one sitemap file per call:
 
-1. list the top files: `{ "url": …, "depth": 0, "entries": "sitemaps" }`.
-2. read each with `{ "url": …, "sitemap_url": <file>, "max_results": 100000 }`, paging with `page` while `has_more` is true.
-3. add every address in that answer's `unread_sitemaps` to your list, and read those too.
+1. list the top files and every file they list, in one call: `{ "url": …, "depth": 1, "entries": "sitemaps" }`.
+2. read each link of type `sitemap`, plus each `sitemap_index` link that is also in `unread_sitemaps` (an index this map read only in part), with `{ "url": …, "sitemap_url": <file>, "max_results": 100000 }`, paging with `page` while `has_more` is true. the files of an index read whole are already in your list.
+3. add every address in the `unread_sitemaps` of those later answers to your list, and read those too.
 4. read each file once, and keep the ones that stay unread to try again later.
 
 `unread_sitemaps` holds up to 1000 addresses. when it is full, ask the same thing with `entries: "sitemaps"`: you get every sitemap file the call found as links, paged like any answer.
@@ -193,7 +198,9 @@ this is the same url form `/scrape` reports for the page it fetched, so map-then
 
 every link has all three fields:
 
-- **`type`**: `page`, or `sitemap` for a sitemap file you can read with `sitemap_url` in another call (a file on another site only when the site's robots.txt names its host; otherwise map that file's own site). a home page link is a `page`.
+- **`type`**: `page`, `sitemap` or `sitemap_index`. read either kind of sitemap file with `sitemap_url` in another call (a file on another site only when the site's robots.txt names its host; otherwise map that file's own site). a home page link is a `page`.
+  - `sitemap_index`: a sitemap file this map found to be an index (it lists other sitemap files), whether it read all of the file, part of it, or only its start. it can also be in `unread_sitemaps` when the map didn't read all of it.
+  - `sitemap`: any other sitemap file. either it lists pages, or the map didn't learn its kind (it was past `depth`, or it couldn't be read).
 - **`lastmod`**: the entry's `lastmod` from the sitemap, an iso-8601 date and time in utc, or `null` when the sitemap gives none or it can't be read. always `null` for a home page link.
 
 if you need a link's anchor text, that's the scrape response's `links` field, not this. the site root is listed only when a sitemap lists it.
@@ -246,7 +253,7 @@ request `page: 1`, then keep going while `response_meta.pagination.has_more` is 
 | --- | --- | --- |
 | `null` | nothing capped discovery | the list is complete — stop |
 | `max_results` | your ceiling filled up while sitemap files were still unread | **retry with a higher `max_results`** |
-| `depth` | sitemap files lie below the `depth` you asked for | expected when you asked for a low `depth`. read the files in `unread_sitemaps` with `sitemap_url`, or raise `depth` |
+| `depth` | sitemap files lie below the `depth` you asked for | expected when you asked for a low `depth`: it is how `depth: 0` lists the top files, and how `depth: 1` with `entries: "sitemaps"` lists them with every file they list. read the files in `unread_sitemaps` with `sitemap_url`, or raise `depth` |
 | `unread_files` | a sitemap file couldn't be read whole this time: a `429`/`5xx`, a file that is not a readable sitemap, or a download that broke off (the links received before the break come back, and the file is in `unread_sitemaps`) | **a retry may help**: it's often transient, so a retry soon can work. if it keeps happening, the site is publishing something we can't read: stop retrying |
 | `time` · `file_budget` | the site is bigger or slower than one discovery pass | raising `max_results` won't help. read the files in `unread_sitemaps` with `sitemap_url`, one call each |
 | `file_size` | a sitemap file was too large. a file that says up front that it is over the size limit is not downloaded: nothing comes back, it is in `unread_sitemaps`, and no call reads it. a file of pages that turns out too large while it is read gives the links in its first part. any other file that turns out too large, such as an index, gives nothing and is in `unread_sitemaps` | a retry reads the same part, so accept a partial list for that file |

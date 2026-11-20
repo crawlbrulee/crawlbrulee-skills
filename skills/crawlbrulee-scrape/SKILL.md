@@ -33,7 +33,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 | --- | --- | --- | --- |
 | `url` | string | — | the url to scrape. http/https only. |
 | `extract` | object | `{ markdown, metadata }` | which formats you want — see below |
-| `require_js` | boolean | `false` | render JavaScript in a headless browser |
+| `require_js` | boolean | `false` | go straight to a headless browser. without it, a page that needs one still gets one |
 | `cleanup` | object | `{ ads_and_popups: true }` | what gets removed before any output is built — see below |
 | `proxy` | `basic` · `advanced` · `auto` | `auto` | see **crawlbrulee-api** |
 | `cache.max_age` | seconds or iso-8601 datetime | see docs | `0` forces a fresh fetch |
@@ -302,7 +302,7 @@ first look at `page_status_code`. if the site answered `404` or `410`, the page 
 
 if the status is fine but the content is thin, two levers, in this order:
 
-1. **`require_js: true`** — use it when the content renders client-side.
+1. **`require_js: true`** — use it when parts of the page render client-side and the default scrape missed them.
 2. **`proxy: "advanced"`** — use the enhanced proxy tier for a higher retrieval success rate.
 
 an `antibot_blocked` error means the target's bot protection blocked the request; don't retry it automatically. a `too_many_redirects` error (422) means the target redirected the request in a loop; same rule. a `page_too_large` error (422) means the page's html was too large to process — terminal, so don't retry it; scrape a smaller page instead. a `target_unreachable` error (502) means we could not reach the site at all — no page came back and you are not billed; retry once after a pause, and if it keeps failing, check the url and whether the site is up. `require_js` adds latency; see <https://crawlbrulee.com/pricing> for how the proxy tier affects cost.

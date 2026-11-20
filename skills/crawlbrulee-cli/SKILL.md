@@ -206,7 +206,7 @@ crawlbrulee map https://example.com --text > urls.txt   # one url per line
 | `--limit <n>` | page size — how many of the collected urls come back in **this** response, default `5000`, max `10000`. it is not how many urls get collected |
 | `--max-results <n>` | total entries to collect, counting only the kind in `--entries`, default `5000`, api max `100000` |
 | `--sitemap-url <url>` | read this one sitemap file (on the same site, or on a host the site's robots.txt names) instead of starting from the site's top sitemap files |
-| `--depth <n>` | levels of nested sitemaps to read, `0` to `3`, default `3`. `0` without `--sitemap-url` lists the site's top sitemap files without reading them |
+| `--depth <n>` | levels of nested sitemaps to read, `0` to `3`, default `3`. `0` without `--sitemap-url` lists the site's top sitemap files without reading their entries, and `1` with `--entries sitemaps` lists them and every file they list |
 | `--entries <kind>` | `pages` (default) · `sitemaps` · `all` |
 | `--modified-since <date>` | only entries whose `lastmod` is at or after this date (`2026-11-01`, or a date and time with a zone). never served from the cache |
 | `--page <n>` | page number (1-indexed) |
@@ -235,7 +235,7 @@ raising `--max-results` doesn't cost extra credits by itself. but a cached map b
 ### sitemaps one at a time (cli `5.5.0`)
 
 ```bash
-crawlbrulee map https://example.com --depth 0 --entries sitemaps        # the site's top sitemap files
+crawlbrulee map https://example.com --depth 1 --entries sitemaps        # the top sitemap files and every file they list
 crawlbrulee map https://example.com --sitemap-url https://example.com/sitemap-products.xml
 crawlbrulee map https://example.com --modified-since 2026-11-01         # only what changed since then
 ```
@@ -243,11 +243,16 @@ crawlbrulee map https://example.com --modified-since 2026-11-01         # only w
 in text mode a plain map stays one url per line, so it pipes straight into the next command. with `--entries all`, where pages and sitemap files mix, each line is `<type> <lastmod> <url>` (`-` for no date). when a call left sitemap files unread, the text ends with them as `#` comment lines: try each one next with `--sitemap-url`. in json every link is `{ url, type, lastmod }`:
 
 ```bash
-crawlbrulee map https://example.com --entries sitemaps --json | jq -r '.links[].url'   # sitemap files to read next
+# sitemap files to read next: each link of type sitemap, plus each sitemap_index link
+# that is also in unread_sitemaps (an index this map read only in part)
+crawlbrulee map https://example.com --depth 1 --entries sitemaps --json \
+  | jq -r '.response_meta.truncation.unread_sitemaps as $u | .links[]
+      | select(.type == "sitemap" or (.type == "sitemap_index" and (.url | IN($u[]))))
+      | .url'
 crawlbrulee map https://example.com --json | jq -r '.response_meta.truncation.unread_sitemaps[]'
 ```
 
-a sitemap index holds only sitemap files, so reading one at a low `--depth` with the default `--entries pages` returns no pages: use `--entries sitemaps` or a higher `--depth`. `--modified-since` leaves out every entry with no `lastmod`, and every call (every `--page` too) is billed as a fresh map. a `429` from the site on the file in `--sitemap-url` or on a top sitemap file ends the map with `too_many_requests`, not billed: wait, then run it again. the whole several-calls flow is in **crawlbrulee-map**.
+a sitemap index holds only sitemap files, so reading one at a low `--depth` with the default `--entries pages` returns no pages: use `--entries sitemaps` or a higher `--depth`. `--modified-since` leaves out every entry with no `lastmod`. it reads every sitemap file whatever its own date and judges each entry by its own `lastmod`, so with `--entries sitemaps` a file comes back by its own date: use `--entries pages` to find the pages that changed. every call (every `--page` too) is billed as a fresh map. a `429` from the site on the file in `--sitemap-url` or on a top sitemap file ends the map with `too_many_requests`, not billed: wait, then run it again. the whole several-calls flow is in **crawlbrulee-map**.
 
 ## `usage` and `whoami`
 
