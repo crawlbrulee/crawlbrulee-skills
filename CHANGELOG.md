@@ -4,6 +4,11 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.6.5 (2026-11-23)
+
+- crawlbrulee-mcp: the hosted server takes no `proxy` tier; every hosted call uses `auto`. the
+  example input no longer sends one, and the list of what the hosted server leaves out names it.
+
 ## 1.6.4 (2026-11-23)
 
 ### changed

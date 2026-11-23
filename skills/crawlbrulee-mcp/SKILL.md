@@ -11,7 +11,7 @@ metadata:
 
 the hosted mcp server, `https://api.crawlbrulee.com/mcp`, gives mcp-aware agents crawlbrulee as native tools, so the agent can scrape and map without any glue code. nothing to install, and your user signs in through their browser instead of handling an api key. the crawlbrulee plugin connects to it.
 
-need your own `headers` and `cookies` on a scrape, a `webhook` on a background job, `extract.raw_html`, or the screenshot's `viewport` and `actions`? the hosted server leaves those out. use the local server, `@crawlbrulee/mcp` (see **crawlbrulee-mcp-local**), the cli or an sdk.
+need your own `headers` and `cookies` on a scrape, a `webhook` on a background job, `extract.raw_html`, the screenshot's `viewport` and `actions`, or a `proxy` tier? the hosted server leaves those out (every hosted call uses `auto`). use the local server, `@crawlbrulee/mcp` (see **crawlbrulee-mcp-local**), the cli or an sdk.
 
 this skill is the tool surface. for what the api actually does — extract formats, proxy tiers, caching, errors — read **crawlbrulee-api** and the capability skills.
 
@@ -63,7 +63,6 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
     "screenshot": { "type": "full_page", "device_mode": "desktop" }
   },
   "require_js": false,
-  "proxy": "auto",
   "cleanup": { "ads_and_popups": true, "exclude_selectors": ["nav", "footer"] },
   "cache": { "max_age": 3600 },
   "location": { "locale": "en-US", "country": "US" },
@@ -73,7 +72,7 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 
 **`scrape` gives up after about 50 seconds** with a `request_timeout` error, before most chat apps cut a call off. for a slow page (heavy JavaScript, a full-page screenshot, a pdf), use `scrape_async` instead.
 
-`proxy` defaults to `auto` (steps up on its own when a site needs more: a stronger proxy, a real browser, or both). `require_js: true` goes straight to a browser; without it, a page that needs one still gets one. screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage`, so the agent can see per-call cost without calling `usage`: `total_credit_cost` is what the call cost, and `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost` are the parts that make it up. use `engine: "cache"` to identify a cache hit.
+`require_js: true` goes straight to a browser; without it, a page that needs one still gets one. screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage`, so the agent can see per-call cost without calling `usage`: `total_credit_cost` is what the call cost, and `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost` are the parts that make it up. use `engine: "cache"` to identify a cache hit.
 
 **`zero_data_retention: true`** (on `scrape`, `scrape_async` and `map`) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). only send it when the user asks for it.
 
