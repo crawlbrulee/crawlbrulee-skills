@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.6.4 (2026-11-23)
+
+### changed
+
+- no changes to the skills or the manifests' content. this version only carries the plugin to OpenAI's plugin directory again, which needs a new version number for each upload.
+
 ## 1.6.3 (2026-11-23)
 
 ### changed
