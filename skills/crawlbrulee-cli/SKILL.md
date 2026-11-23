@@ -157,7 +157,7 @@ see **crawlbrulee-screenshots** for what the options mean and what comes back.
 
 ### a pdf, and dark-mode screenshots
 
-cli `5.5.0` adds the api's `extract.pdf` (the page saved as a pdf, see **crawlbrulee-scrape**) and `extract.screenshot.color_scheme` (`light` or `dark`, see **crawlbrulee-screenshots**). read the pdf from the json: `--json | jq -r .pdf.url` prints its signed link, and `.pdf.bytes` its size. the link expires 24 hours after the scrape, so download the file right away (`curl -o page.pdf "$(… --json | jq -r .pdf.url)"`), and use the link exactly as printed. a pdf costs what a screenshot costs. when no pdf came back, `warnings` has `pdf_unavailable`; a pdf-only request fails with `unsupported_pdf_output` when the content type can't be made into a pdf, not billed.
+cli `5.5.0` adds the api's `extract.pdf` (the page saved as a pdf, see **crawlbrulee-scrape**) and `extract.screenshot.color_scheme` (`light` or `dark`, see **crawlbrulee-screenshots**). read the pdf from the json: `--json | jq -r .pdf.url` prints its signed link, and `.pdf.bytes` its size. the link expires 24 hours after the scrape, so download the file right away, and use the link exactly as printed. a pdf costs what a screenshot costs. when no pdf came back, `warnings` has `pdf_unavailable`; a pdf-only request fails with `unsupported_pdf_output` when the content type can't be made into a pdf, not billed.
 
 ## async jobs
 

@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.6.1 (2026-11-23)
+
+### changed
+
+- **crawlbrulee-cli:** the pdf tip no longer shows a command that downloads the file. it says to download the pdf right away from the link the cli prints, since the link expires 24 hours after the scrape.
+
 ## 1.6.0 (2026-11-20)
 
 ### changed
