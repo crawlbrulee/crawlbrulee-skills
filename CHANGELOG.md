@@ -4,6 +4,12 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## 1.6.3 (2026-11-23)
+
+### changed
+
+- **codex plugin manifest:** the empty `screenshots` list is gone from `.codex-plugin/plugin.json`. the plugin had no screenshots to show, and OpenAI's plugin directory refuses the field.
+
 ## 1.6.1 (2026-11-23)
 
 ### changed
