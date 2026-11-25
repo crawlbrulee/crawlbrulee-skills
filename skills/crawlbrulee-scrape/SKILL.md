@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-scrape
-description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or saving the page as a pdf, or sending your own headers and cookies with the request. covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
+description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or saving the page as a pdf, or sending your own headers and cookies with the request, or clicking, scrolling, hovering and waiting on the page before it is read (actions). covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -42,10 +42,11 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 | `zero_data_retention` | boolean | `false` | keep the result out of the shared cache, +1 credit — see below |
 | `headers` | object, name → string | — | your own http headers for the site, e.g. an api key or a fixed `User-Agent` the site has on its allowlist. see [below](#headers-and-cookies) |
 | `cookies` | list of `{ name, value }` | — | your own cookies for the site. see [below](#headers-and-cookies) |
+| `actions` | list of actions | — | click, scroll, hover and wait on the page before it is read. see [below](#actions-click-scroll-and-wait-first) |
 
 `max_age` is the only cache field — `cache` rejects anything else.
 
-**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry. the screenshot and pdf settings are the exception: a cached copy serves them only when it was made with the same settings (see **crawlbrulee-screenshots** and [the pdf section](#saving-the-page-as-a-pdf)). a request with `headers` or `cookies` skips the cache entirely (see [below](#headers-and-cookies)).
+**the url you send is the cache key.** known tracking params are stripped before the page is fetched, so they never reach the target site — see [caching](https://crawlbrulee.com/docs/scrape/caching#tracking-parameters). every **other** query param is part of the key: `?lang=en` and `?lang=fr` are separate entries. strip params that don't change the page before you send the url, or you pay full price for near-duplicates. `extract` is **not** part of the key — adding or dropping an output field (say `raw_html` or `elements`) still matches the same entry. the screenshot and pdf settings are the exception: a cached copy serves them only when it was made with the same settings (see **crawlbrulee-screenshots** and [the pdf section](#saving-the-page-as-a-pdf)). a request with `headers` or `cookies`, or with `actions`, skips the cache entirely (see [below](#headers-and-cookies)).
 
 **`zero_data_retention: true`** goes at the top level of the body, not inside `cache`. keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
@@ -60,7 +61,7 @@ for a background job instead of a blocking call, the body is identical — see *
 | `metadata` | **`true`** | the parsed `<head>` block — title, description, og/twitter tags, favicon |
 | `markdown` | **`true`** | clean markdown — the usual choice for llm/rag ingestion |
 | `cleaned_html` | `false` | the page body with scripts, styles, ads and cookie banners removed |
-| `raw_html` | `false` | the unprocessed document |
+| `raw_html` | `false` | the page's html with its classes and attributes, after `cleanup`, with its JSON-LD |
 | `links` | `false` | the links on the page, up to a per-page cap |
 | `images` | `false` | inline images, up to a per-page cap |
 | `screenshot` | `false` | a capture — see **crawlbrulee-screenshots** |
@@ -125,7 +126,7 @@ the result has a top-level `elements` with the same names:
 - **use `fields` for a list of records.** fields look only inside each match, so a product's title, price and url stay together. for the same reason a field selector that starts with `+` or `~` matches nothing. to read the matched element itself, use the selector `:scope`: `{ "selector": ":scope", "output": "attribute", "attribute": "href" }` gives the matched element's own `href`. a field without `:scope` never answers with the match itself. two separate `all: true` lists can differ in length (a match without the attribute is left out), so don't pair them up by position.
 - **every name you asked for is always there**, at every level. no match is `null`, or `[]` with `all: true`.
 - values are read **after `cleanup`**, from the same page as `links` and `images`. if they render client-side, add `require_js: true`.
-- `<script>` and `<style>` can't be selected, so JSON-LD and inline script data are out of reach — ask for `raw_html` for those.
+- JSON-LD blocks can be selected: `{ "selector": "script[type=\"application/ld+json\"]", "all": true }` gives each block's text as a string, for you to parse as json. other scripts and `<style>` can't be selected.
 - tables are read the way a browser reads them, so `table > tbody > tr` works even when the page's html leaves out `<tbody>`.
 - an invalid selector (a pseudo-element like `p::before` too) or too many selectors is a `400` `validation_error`, not billed.
 - a list stops at 1,000 matches, and a request has limits on matches and size. when a value hits one, `warnings` has `elements_truncated`.
@@ -180,14 +181,14 @@ the full rules are in the docs: [pdf](https://crawlbrulee.com/docs/scrape/pdf).
 }
 ```
 
-`ads_and_popups` is **on by default** and removes ads, cookie banners, consent dialogs and chat widgets. Turn it off with `"ads_and_popups": false` when you want the page as-is — or when a site refuses to serve an ad-blocking client.
+`ads_and_popups` is **on by default** and removes ads, cookie banners, consent dialogs and chat widgets. turn it off with `"ads_and_popups": false` to get the page as-is.
 
 `exclude_selectors` is for anything the default does not catch. at most 100 selectors, each at most 500 characters.
 
 three things to know:
 
-- it shapes `markdown`, `cleaned_html`, `links`, `images`, the screenshot and the pdf.
-- it **never** touches `raw_html`. that is always the page as it arrived, before anything was removed — so you can always get back what we started from.
+- it runs once, when the page has loaded, before any output is built, and before any `actions`. so it shapes every output: `markdown`, `cleaned_html`, `raw_html`, `links`, `images`, `metadata`, `elements`, the screenshot and the pdf. to get the page as it arrived, set `ads_and_popups` to `false` and send no `exclude_selectors`.
+- something the page adds later, such as a popup that opens after a few seconds, is not removed.
 - both settings are part of the cache key, so both stay cacheable. requests with the same `exclude_selectors` share a cache entry; different ones don't.
 
 ## headers and cookies
@@ -215,6 +216,42 @@ send your own `headers` (for example an api key, a bearer token, or a fixed `Use
 
 the full rules are in the docs: [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
 
+## actions: click, scroll and wait first
+
+`actions` is a list of things to do on the page, in order, before we read it. every output shows the page as the actions left it.
+
+```jsonc
+{
+  "url": "https://shop.example.com/books/",
+  "actions": [
+    { "type": "click", "selector": ".newsletter-popup .close", "optional": true },
+    { "type": "click", "selector": "button.load-more" },
+    { "type": "wait_for", "selector": "article.book:nth-of-type(40)" },
+    { "type": "scroll", "to": "bottom" }
+  ]
+}
+```
+
+| type | fields | what it does |
+| --- | --- | --- |
+| `wait` | `ms` | waits that many milliseconds |
+| `scroll` | `pixels`, or `to` (`top`, `bottom`, `left`, `right` or a css selector), optional `duration_ms` | scrolls the page; without `duration_ms` it moves at a steady pace, so images on the way load |
+| `wait_for` | `selector` | waits up to 10 s for the element to be on the page and visible |
+| `hover` | `selector`, or `x` and `y` | moves the mouse there; skipped on a mobile page |
+| `click` | `selector` | clicks the first match (a tap on mobile) |
+
+- **limits:** up to 12 actions and 60 s for the whole list. a list that breaks a rule (a bad selector, `pixels` and `to` together, waits over 60 s) is a `400` `validation_error`, not billed.
+- **cleanup runs first.** ads, popups, cookie banners and your `exclude_selectors` are gone before the first action, so you can't click them. a popup that opens later can block a click: click its close button first, with `"optional": true`.
+- **a failed action stops the list.** you still get the page as it was then, billed as usual, with the `actions_incomplete` warning. an `optional` action that fails is `skipped` and the list goes on.
+- **the report:** the response has `actions`, one `{ type, status }` per action, in order. `status` is `ran`, `failed`, `skipped` or `not_run`.
+- **a click that loads a new page** is followed: the rest of the list runs there, and the response is that page (its `url`, `page_status_code` and content). a click that opens a new tab is ignored.
+- **when you know the new page's url** (a "next" link's `?page=2`, say), scrape that url directly instead of clicking to it. it loads once, not twice, so it's faster and more reliable; it can come from the cache, and it may not need a browser, so it can cost fewer credits.
+- **runs in a browser, never cached.** billed as a browser scrape; the actions add no credits.
+- **retries run the actions again**, from the start. use actions to read pages, never to place orders or sign up.
+- **where you can send it:** `actions` works over the api directly and on the hosted mcp server. the sdks, the cli and the local mcp server don't have it yet; they keep the old name, `extract.screenshot.actions_before` (waits and scrolls), until their next update. the old name works until it is removed on 2027-02-01. never send both in one request (a `400`).
+
+the full rules are in the docs: [actions](https://crawlbrulee.com/docs/scrape/actions).
+
 ## the response
 
 fields you didn't request are simply absent.
@@ -234,6 +271,7 @@ fields you didn't request are simply absent.
   "pdf": { "url": "…", "bytes": 184320 },  // only if you asked for a pdf
   "metadata": { "title": "…", "description": "…", "og_title": "…", "favicon_url": "…" },
   "elements": { "heading": "Books", "books": [ /* … */ ] },  // only if you asked for elements
+  "actions": [{ "type": "click", "status": "ran" }],        // only if you sent actions
   "unsupported_fields": [],
   "warnings": [],
   "response_meta": {
@@ -286,11 +324,12 @@ a second family means that section's extraction failed, so the field came back o
 
 **an empty field carrying one of these does not mean the page had none.** that's the whole point of the code — it separates "we couldn't read them" from "there weren't any". don't report the absence as a finding; re-run the scrape. an empty field with no such warning is a real absence.
 
-one more code is about your request, not the page:
+two more codes are about your request, not the page:
 
 | code | what it means |
 | --- | --- |
 | `custom_user_agent` | the request set its own `User-Agent` header; this can lower the success rate. see [headers and cookies](#headers-and-cookies) |
+| `actions_incomplete` | an action failed or never ran; the `actions` report says which, and the page is the one the actions left. see [actions](#actions-click-scroll-and-wait-first) |
 
 new codes can be added over time, so treat a code you don't know as a note, not a failure.
 
@@ -304,6 +343,8 @@ if the status is fine but the content is thin, two levers, in this order:
 
 1. **`require_js: true`** — use it when parts of the page render client-side and the default scrape missed them.
 2. **`proxy: "advanced"`** — use the enhanced proxy tier for a higher retrieval success rate.
+
+if the content shows only after a click or a scroll (a "load more" button, a tab, lazy images), send [`actions`](#actions-click-scroll-and-wait-first).
 
 an `antibot_blocked` error means the target's bot protection blocked the request; don't retry it automatically. a `too_many_redirects` error (422) means the target redirected the request in a loop; same rule. a `page_too_large` error (422) means the page's html was too large to process — terminal, so don't retry it; scrape a smaller page instead. a `target_unreachable` error (502) means we could not reach the site at all — no page came back and you are not billed; retry once after a pause, and if it keeps failing, check the url and whether the site is up. `require_js` adds latency; see <https://crawlbrulee.com/pricing> for how the proxy tier affects cost.
 

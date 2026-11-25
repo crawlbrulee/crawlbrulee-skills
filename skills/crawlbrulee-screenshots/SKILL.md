@@ -30,12 +30,12 @@ new to crawlbrulee? read the **crawlbrulee** skill first. for the surrounding re
 | `color_scheme` | `light` · `dark` | `light` | `dark` asks the site for its dark theme, see below |
 | `viewport` | `{ width, height, device_scale_factor }` | per `device_mode` | see below |
 | *(see `cleanup`, top level)* | object | **`{ ads_and_popups: true }`** | strips ads, cookie banners and popups before capture — a **top-level** field, not part of `screenshot` |
-| `actions_before` | array, max 5 | `[]` | scroll/wait the page into shape first |
+| `actions_before` | array | `[]` | the old name of the top-level `actions` (below); works until 2027-02-01 |
 | `actions_after` | array, max 1 | `[]` | currently just `slice` |
 
 **`viewport`** — if you pass the object at all, both `width` and `height` are required. they're integers in `[16, 10000]`. `device_scale_factor` is a number in `[1, 3]`, fractional allowed, default `1` — pass `2` for retina-density output. out-of-range values are rejected with a `400`.
 
-**`cleanup` is a top-level request field, not a screenshot one.** it used to live inside `screenshot`; sending it there now is a 400. `cleanup.ads_and_popups` defaults to `true`, so banners are removed unless you ask for them — set it `false` only when you specifically want them in frame. the same block also shapes `markdown`, `cleaned_html`, `links` and `images`, and never `raw_html`.
+**`cleanup` is a top-level request field, not a screenshot one.** it used to live inside `screenshot`; sending it there now is a 400. `cleanup.ads_and_popups` defaults to `true`, so banners are removed unless you ask for them — set it `false` only when you specifically want them in frame. the same block shapes every other output too, `raw_html` included, and runs before any `actions`.
 
 ## dark mode (`color_scheme`)
 
@@ -50,20 +50,24 @@ new to crawlbrulee? read the **crawlbrulee** skill first. for the surrounding re
 - when the request also asks for `extract.pdf`, the pdf is made from the same page, so it shows the dark theme too. a pdf with no screenshot is made with the light theme: the pdf has no color setting of its own. see **crawlbrulee-scrape**.
 - a dark capture and a light one are separate cache entries.
 
-## scrolling and waiting before capture (`actions_before`)
+## scrolling and waiting before capture (`actions`)
 
-nudge a page into its final state before we shoot it — the fix for lazy-loaded images and on-scroll content. up to 5 actions, two types:
+nudge a page into its final state before we shoot it: the fix for lazy-loaded images, on-scroll content and a "load more" button. send the top-level `actions` list (not part of `screenshot`); the screenshot shows the page as the actions left it:
 
 ```jsonc
-"actions_before": [
-  { "type": "scroll", "pixels": 2000 },   // negative scrolls up
-  { "type": "wait", "ms": 1500 }
-]
+{
+  "url": "https://shop.example.com/books/",
+  "extract": { "screenshot": { "type": "full_page" } },
+  "actions": [
+    { "type": "scroll", "to": "bottom" },   // a steady scroll, so images on the way load
+    { "type": "wait", "ms": 1000 }
+  ]
+}
 ```
 
-there are caps on the total wait and total scroll distance across the array; exceeding either is a validation error. see [screenshots](https://crawlbrulee.com/docs/scrape/screenshots) for the current ceilings.
+`actions` also waits for an element, hovers and clicks: up to 12 actions and 60 s for the whole list. a request with actions never uses the cache. the types, limits and the report are in **crawlbrulee-scrape** and the [actions docs](https://crawlbrulee.com/docs/scrape/actions).
 
-**a non-zero wait or scroll disables caching for that request** — every such call is a fresh fetch. zero-valued or empty arrays don't affect caching.
+over the api directly or the hosted mcp server, send `actions`. the sdks, the cli and the local mcp server don't have it yet: there, keep using `extract.screenshot.actions_before` (waits and scrolls) until their next update. it works until it is removed on 2027-02-01. never send both in one request (a `400`).
 
 ## slicing tall pages (`actions_after`)
 
@@ -77,7 +81,7 @@ the response then carries a `slices[]` array alongside the main image. there's a
 
 with `zero_data_retention: true` the screenshot file is kept for 24 hours, then deleted, so download it inside that window. it adds 1 credit on a billed, fresh capture. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention).
 
-unlike `actions_before`, `actions_after` does **not** disable caching.
+unlike `actions`, `actions_after` does **not** disable caching.
 
 ## example
 
@@ -91,10 +95,10 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
         "type": "full_page",
         "device_mode": "desktop",
         "viewport": { "width": 1920, "height": 1080, "device_scale_factor": 2 },
-        "actions_before": [{ "type": "scroll", "pixels": 4000 }],
         "actions_after": [{ "type": "slice", "height": 800 }]
       }
-    }
+    },
+    "actions": [{ "type": "scroll", "pixels": 4000 }]
   }'
 ```
 
@@ -135,7 +139,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 - **check `page_status_code` too.** a page the site served with an error status is still a page, so you get a screenshot of it — a `404` page shoots like any other. look at the result's `page_status_code` before you treat the image as the page you wanted. see **crawlbrulee-scrape**.
 - **very long pages get capped.** we stop at a maximum capture height and flag it with a `screenshot_truncated` entry in the response's `warnings` array. if you see that code, the image and its slices stop at the cap.
 - **screenshot settings are part of the cache key.** the same url at a different capture type, viewport, device mode or `color_scheme` is a different entry — changing any of them means a fresh fetch.
-- **lazy content missing?** add an `actions_before` scroll and a short wait, or set `require_js: true` when the content renders client-side.
+- **lazy content missing?** add a scroll and a short wait (in `actions`, or `actions_before` in the sdks, the cli and the local mcp server), or set `require_js: true` when the content renders client-side.
 
 ## see also
 

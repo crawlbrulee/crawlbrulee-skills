@@ -158,7 +158,7 @@ things worth knowing about the cache key:
 - **apart from the screenshot and pdf settings, `extract` is NOT part of the key.** adding or dropping an output field (say `raw_html`) on an otherwise identical request still matches the same entry. `extract.elements` too: a cache hit reads your selectors from the cached page, and still costs 0.
 - **`require_js: true` only matches entries that were rendered with JavaScript.**
 - **`cleanup` is part of the key**, so `ads_and_popups` and `exclude_selectors` both stay cacheable. requests with the same removals share an entry; different ones don't.
-- a screenshot with a non-zero `actions_before` wait or scroll disables caching.
+- **a request with `actions` never reads from or writes to the cache** (a list of only zero-value actions, like a `wait` of `0`, doesn't count). see [actions](https://crawlbrulee.com/docs/scrape/actions).
 - **a request with `headers` or `cookies` never reads from or writes to the cache.** it is always a fresh fetch, billed as one.
 
 ## account

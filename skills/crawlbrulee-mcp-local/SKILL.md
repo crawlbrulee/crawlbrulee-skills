@@ -11,7 +11,7 @@ metadata:
 
 `@crawlbrulee/mcp` runs crawlbrulee's mcp tools on your user's machine, so the agent can scrape and map without any glue code. it's a thin stdio adapter over `@crawlbrulee/sdk`, `npx`-runnable with zero install, and it reads an api key from its environment.
 
-most users don't need it: the hosted server at `https://api.crawlbrulee.com/mcp` has the same seven tools, needs no install and signs your user in through their browser (see **crawlbrulee-mcp**; the crawlbrulee plugin connects to it). the local server is for the few fields the hosted one leaves out: your own `headers` and `cookies`, a `webhook` on a background job, `extract.raw_html`, and the screenshot's `viewport` and `actions`.
+most users don't need it: the hosted server at `https://api.crawlbrulee.com/mcp` has the same seven tools, needs no install and signs your user in through their browser (see **crawlbrulee-mcp**; the crawlbrulee plugin connects to it). the local server is for the few fields the hosted one leaves out: your own `headers` and `cookies`, a `webhook` on a background job, `extract.raw_html`, and the screenshot's `viewport` and `actions_before`. the top-level `actions` list (click, scroll, hover, wait) is on the hosted server only, for now.
 
 this skill is the tool surface. for what the api actually does — extract formats, proxy tiers, caching, errors — read **crawlbrulee-api** and the capability skills.
 
@@ -104,7 +104,7 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 // → "elements": { "heading": "Books", "books": [{ "title": "The Night Garden", "price": "€18.90" }, …] }
 ```
 
-`fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+`fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list); JSON-LD blocks can be selected (`script[type="application/ld+json"]` with `all: true` gives each block's text, for you to parse), other scripts and `<style>` can't; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 **your own headers and cookies.** `scrape` and `scrape_async` take `headers` (an object of name → value) and `cookies` (a list of `{ "name", "value" }`), sent to the site with the request (needs `@crawlbrulee/mcp` `1.4.0` or newer):
 

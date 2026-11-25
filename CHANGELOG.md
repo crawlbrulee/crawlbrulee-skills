@@ -4,6 +4,14 @@ all notable changes to the crawlbrulee agent skills and plugin are documented he
 
 this project follows [Semantic Versioning](https://semver.org). the version is the one in the plugin manifests.
 
+## unreleased
+
+- **actions.** `crawlbrulee-scrape` teaches the top-level `actions` list: `wait`, `scroll`, `wait_for`, `hover` and `click`, run in order before the page is read, with the limits, the `actions` report and the `actions_incomplete` warning. `crawlbrulee-mcp` shows `actions` on the hosted `scrape` and `scrape_async` tools, and the overview lists it.
+- **crawlbrulee-screenshots:** scrolling and waiting before a capture moves to `actions`. `extract.screenshot.actions_before` is its old name, removed on 2027-02-01; the sdks, the cli and the local mcp server use it until their next update.
+- **`raw_html` comes after cleanup** and keeps the page's JSON-LD. `crawlbrulee-scrape` says cleanup shapes every output, and that `extract.elements` can read JSON-LD blocks.
+- **crawlbrulee-api:** a request with `actions` never uses the cache.
+- **crawlbrulee-mcp-local:** the top-level `actions` is on the hosted server only, for now. both mcp skills say JSON-LD blocks can be read with `extract.elements`.
+
 ## 1.6.5 (2026-11-23)
 
 - crawlbrulee-mcp: the hosted server takes no `proxy` tier; every hosted call uses `auto`. the

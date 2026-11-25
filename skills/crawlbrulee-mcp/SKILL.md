@@ -11,7 +11,7 @@ metadata:
 
 the hosted mcp server, `https://api.crawlbrulee.com/mcp`, gives mcp-aware agents crawlbrulee as native tools, so the agent can scrape and map without any glue code. nothing to install, and your user signs in through their browser instead of handling an api key. the crawlbrulee plugin connects to it.
 
-need your own `headers` and `cookies` on a scrape, a `webhook` on a background job, `extract.raw_html`, the screenshot's `viewport` and `actions`, or a `proxy` tier? the hosted server leaves those out (every hosted call uses `auto`). use the local server, `@crawlbrulee/mcp` (see **crawlbrulee-mcp-local**), the cli or an sdk.
+need your own `headers` and `cookies` on a scrape, a `webhook` on a background job, `extract.raw_html`, the screenshot's `viewport` and `actions_before`, or a `proxy` tier? the hosted server leaves those out (every hosted call uses `auto`). use the local server, `@crawlbrulee/mcp` (see **crawlbrulee-mcp-local**), the cli or an sdk.
 
 this skill is the tool surface. for what the api actually does — extract formats, proxy tiers, caching, errors — read **crawlbrulee-api** and the capability skills.
 
@@ -70,13 +70,27 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 }
 ```
 
-**`scrape` gives up after about 50 seconds** with a `request_timeout` error, before most chat apps cut a call off. for a slow page (heavy JavaScript, a full-page screenshot, a pdf), use `scrape_async` instead.
+**`scrape` gives up after about 50 seconds** with a `request_timeout` error, before most chat apps cut a call off. for a slow page (heavy JavaScript, a full-page screenshot, a pdf, a long `actions` list), use `scrape_async` instead.
 
 `require_js: true` goes straight to a browser; without it, a page that needs one still gets one. screenshots come back as urls the agent fetches separately; in the rare case one can't be captured, the `screenshot` field is left out and the rest of the outputs still arrive — unless the screenshot was the *only* output requested, in which case the call errors (`unsupported_screenshot_output` for content types that can't be screenshotted) and isn't billed. scrape results carry `response_meta.usage`, so the agent can see per-call cost without calling `usage`: `total_credit_cost` is what the call cost, and `engine_credit_cost`, `proxy_multiplier`, `screenshot_slicing_credit_cost` and `zero_data_retention_credit_cost` are the parts that make it up. use `engine: "cache"` to identify a cache hit.
 
 **`zero_data_retention: true`** (on `scrape`, `scrape_async` and `map`) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). only send it when the user asks for it.
 
 **check `page_status_code` before you use the content.** a page the site really served is a normal `scrape` result, not a tool error — a `404`, `410` or `503` page comes back with its content, and the site's status is in `page_status_code` at the top level. the markdown of a `404` page is the site's "not found" text; tell the user the page answered `404` instead of treating that text as the page. `5xx` pages are never billed, and neither are `403`, `407`, `408`, `429`, `444` or `451` pages — see **crawlbrulee-api**.
+
+**need to click or scroll first?** `scrape` and `scrape_async` take `actions`: a list of `wait`, `scroll`, `wait_for` (an element), `hover` and `click`, run in order before the page is read. up to 12, and 60 seconds for the whole list:
+
+```jsonc
+{
+  "url": "https://shop.example.com/books/",
+  "actions": [
+    { "type": "click", "selector": "button.load-more" },
+    { "type": "scroll", "to": "bottom" }
+  ]
+}
+```
+
+cleanup runs first, so ads, popups and cookie banners are already gone; a popup that opens later can block a click, so click its close button first with `"optional": true`. a failed action stops the list: the page still comes back, with the `actions_incomplete` warning, and the result's `actions` says what happened to each one. a click that loads a new page is followed, and the result is that page. a call with actions never uses the cache, and a retry runs the actions again, so never use them to place orders or sign up. see [actions](https://crawlbrulee.com/docs/scrape/actions).
 
 **need a few values, not the whole page?** name them by css selector in `extract.elements` and the result has just those, as json, under a top-level `elements`. far less for the agent to read than the markdown, and no extra credits:
 
@@ -101,7 +115,7 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 // → "elements": { "heading": "Books", "books": [{ "title": "The Night Garden", "price": "€18.90" }, …] }
 ```
 
-`fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list); `<script>` and `<style>` can't be selected; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
+`fields` are read inside each match (`:scope` reads the match itself), so each product's values stay together. a name with no match is `null` (`[]` for a list); JSON-LD blocks can be selected (`script[type="application/ld+json"]` with `all: true` gives each block's text, for you to parse), other scripts and `<style>` can't; an invalid selector is a `validation_error`; `elements_truncated` in `warnings` means a value hit a limit; a json, plain-text, xml or markdown page lists `elements` in `unsupported_fields`. the same input works on `scrape_async`. see **crawlbrulee-scrape** and [targeted extraction](https://crawlbrulee.com/docs/scrape/targeted-extraction).
 
 **a pdf, and dark-mode screenshots.** `scrape` and `scrape_async` take `extract.pdf` (`{}` for every default) and `extract.screenshot.color_scheme` (`light` or `dark`), as in the api.
 
