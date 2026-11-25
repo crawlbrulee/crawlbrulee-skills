@@ -11,7 +11,7 @@ metadata:
 
 `@crawlbrulee/mcp` runs crawlbrulee's mcp tools on your user's machine, so the agent can scrape and map without any glue code. it's a thin stdio adapter over `@crawlbrulee/sdk`, `npx`-runnable with zero install, and it reads an api key from its environment.
 
-most users don't need it: the hosted server at `https://api.crawlbrulee.com/mcp` has the same seven tools, needs no install and signs your user in through their browser (see **crawlbrulee-mcp**; the crawlbrulee plugin connects to it). the local server is for the few fields the hosted one leaves out: your own `headers` and `cookies`, a `webhook` on a background job, `extract.raw_html`, and the screenshot's `viewport` and `actions_before`. the top-level `actions` list (click, scroll, hover, wait) is on the hosted server only, for now.
+most users don't need it: the hosted server at `https://api.crawlbrulee.com/mcp` has the same seven tools, needs no install and signs your user in through their browser (see **crawlbrulee-mcp**; the crawlbrulee plugin connects to it). the local server is for the few fields the hosted one leaves out: your own `headers` and `cookies`, a `webhook` on a background job, `extract.raw_html`, and the screenshot's `viewport`. both servers take the same `actions` (see below).
 
 this skill is the tool surface. for what the api actually does — extract formats, proxy tiers, caching, errors — read **crawlbrulee-api** and the capability skills.
 
@@ -80,6 +80,20 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 **`zero_data_retention: true`** (on `scrape`, `scrape_async` and `map`; needs `@crawlbrulee/mcp` `1.2.0` or newer) keeps the result out of the shared cache; anything stored to deliver it is kept for 24 hours, then deleted. it adds 1 credit and must be enabled for your organization. see [zero data retention](https://crawlbrulee.com/docs/zero-data-retention). only send it when the user asks for it.
 
 **check `page_status_code` before you use the content.** a page the site really served is a normal `scrape` result, not a tool error — a `404`, `410` or `503` page comes back with its content, and the site's status is in `page_status_code` at the top level. the markdown of a `404` page is the site's "not found" text; tell the user the page answered `404` instead of treating that text as the page. `5xx` pages are never billed, and neither are `403`, `407`, `408`, `429`, `444` or `451` pages — see **crawlbrulee-api**. if a result has no `page_status_code`, it came from before the field existed, and the page was served normally.
+
+**need to click or scroll first?** `scrape` and `scrape_async` take `actions`: a list of `wait`, `scroll`, `wait_for` (an element), `hover` and `click`, run in order before the page is read (needs `@crawlbrulee/mcp` `2.0.0` or newer). up to 12, and 60 seconds for the waits and scroll durations of the whole list:
+
+```jsonc
+{
+  "url": "https://shop.example.com/books/",
+  "actions": [
+    { "type": "click", "selector": "button.load-more" },
+    { "type": "scroll", "to": "bottom" }
+  ]
+}
+```
+
+cleanup runs first, so ads, popups and cookie banners are already gone; a popup that opens later can block a click, so click its close button first with `"optional": true`. a failed action stops the list: the page still comes back, with the `actions_incomplete` warning, and the result's `actions` says what happened to each one: `ok`, `failed`, `skipped` (it failed, but it was `optional`) or `not_run`. a click that loads a new page is followed: the result is that page, and the rest of the list runs there. when you know the next page's url, such as `?page=2`, scrape it directly instead of clicking to it: it loads once, so it comes back faster, and it can come from the cache. a call with actions never uses the cache, and a long list on a slow page can take longer than your app waits for a tool reply, so use `scrape_async` for it. a retry runs the actions again from the start, so never use them for anything that must happen only once, such as an order. to fill in and send a form (type text into a field, pick an option in a dropdown), call the http api: this server does not offer those actions. from `2.0.0` the screenshot no longer takes `actions_before`: put its waits and scrolls in `actions`, where `{ "type": "wait", "ms": 1000 }` and `{ "type": "scroll", "pixels": 800 }` work as before. see [actions](https://crawlbrulee.com/docs/scrape/actions).
 
 **need a few values, not the whole page?** name them by css selector in `extract.elements` and the result has just those, as json, under a top-level `elements` (needs `@crawlbrulee/mcp` `1.3.0` or newer). far less for the agent to read than the markdown, and no extra credits:
 

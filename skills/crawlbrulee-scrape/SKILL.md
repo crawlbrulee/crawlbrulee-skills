@@ -1,6 +1,6 @@
 ---
 name: crawlbrulee-scrape
-description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or saving the page as a pdf, or sending your own headers and cookies with the request, or clicking, scrolling, hovering and waiting on the page before it is read (actions). covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
+description: use when you need the crawlbrulee scrape contract — turning a url into markdown, cleaned html, raw html, links, images, or page metadata, or pulling named values (prices, titles, links, table rows) out of a page by css selector, or saving the page as a pdf, or sending your own headers and cookies with the request, or clicking, scrolling, hovering, waiting and filling in forms on the page before it is read (actions). covers every extract format and which are on by default, js rendering, removing parts of the page (nav, footers), cache and proxy options, and the full response shape including the page's own status (page_status_code), warnings and unsupported fields.
 license: Apache-2.0
 metadata:
   author: crawlbrulee
@@ -42,7 +42,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 | `zero_data_retention` | boolean | `false` | keep the result out of the shared cache, +1 credit — see below |
 | `headers` | object, name → string | — | your own http headers for the site, e.g. an api key or a fixed `User-Agent` the site has on its allowlist. see [below](#headers-and-cookies) |
 | `cookies` | list of `{ name, value }` | — | your own cookies for the site. see [below](#headers-and-cookies) |
-| `actions` | list of actions | — | click, scroll, hover and wait on the page before it is read. see [below](#actions-click-scroll-and-wait-first) |
+| `actions` | list of actions | — | click, scroll, hover, wait and fill in forms on the page before it is read. see [below](#actions-click-scroll-wait-and-fill-in-forms-first) |
 
 `max_age` is the only cache field — `cache` rejects anything else.
 
@@ -216,7 +216,7 @@ send your own `headers` (for example an api key, a bearer token, or a fixed `Use
 
 the full rules are in the docs: [headers and cookies](https://crawlbrulee.com/docs/scrape/custom-headers-and-cookies).
 
-## actions: click, scroll and wait first
+## actions: click, scroll, wait and fill in forms first
 
 `actions` is a list of things to do on the page, in order, before we read it. every output shows the page as the actions left it.
 
@@ -239,16 +239,36 @@ the full rules are in the docs: [headers and cookies](https://crawlbrulee.com/do
 | `wait_for` | `selector` | waits up to 10 s for the element to be on the page and visible |
 | `hover` | `selector`, or `x` and `y` | moves the mouse there; skipped on a mobile page |
 | `click` | `selector` | clicks the first match (a tap on mobile) |
+| `type` | `selector`, `text`, optional `clear` | types the text into the field: up to 200 characters, no line breaks or tabs. `clear: true` empties the field first |
+| `select` | `selector`, and `value` or `label` | picks an option in a dropdown (a `<select>` field), by its value or by its text as the page shows it |
 
-- **limits:** up to 12 actions and 60 s for the whole list. a list that breaks a rule (a bad selector, `pixels` and `to` together, waits over 60 s) is a `400` `validation_error`, not billed.
+**to fill in and send a form**, such as a search box, `type` into the field, then `click` its button:
+
+```jsonc
+{
+  "url": "https://shop.example.com/books/",
+  "actions": [
+    { "type": "type", "selector": "input[name=q]", "text": "night garden" },
+    { "type": "click", "selector": "form.search button[type=submit]" },
+    { "type": "wait_for", "selector": "article.book" }
+  ]
+}
+```
+
+- `type` fails on anything you can't type into, and on a password field.
+- a dropdown the page builds itself, not a `<select>`, takes two `click`s: one to open it, one on the option.
+- a request with a `type` has a lower rate limit of its own: 10 a minute on the free plan, 60 on paid plans. a `select` alone doesn't count.
+- when the results page has its own url (`/search?q=night+garden`), scrape that url directly instead: it's faster, and it can come from the cache.
+
+- **limits:** up to 12 actions and 60 s for the whole list, waits, scroll durations and typing included. a list that breaks a rule (a bad selector, `pixels` and `to` together, more than 60 s of waits and typing) is a `400` `validation_error`, not billed.
 - **cleanup runs first.** ads, popups, cookie banners and your `exclude_selectors` are gone before the first action, so you can't click them. a popup that opens later can block a click: click its close button first, with `"optional": true`.
 - **a failed action stops the list.** you still get the page as it was then, billed as usual, with the `actions_incomplete` warning. an `optional` action that fails is `skipped` and the list goes on.
-- **the report:** the response has `actions`, one `{ type, status }` per action, in order. `status` is `ran`, `failed`, `skipped` or `not_run`.
-- **a click that loads a new page** is followed: the rest of the list runs there, and the response is that page (its `url`, `page_status_code` and content). a click that opens a new tab is ignored.
+- **the report:** the response has `actions`, one `{ type, status }` per action, in order. `status` is `ok`, `failed`, `skipped` or `not_run`.
+- **a click that loads a new page** is followed (so is a `type` or `select` when the page sends the form by itself): the rest of the list runs there, and the response is that page (its `url`, `page_status_code` and content). a click that opens a new tab is ignored.
 - **when you know the new page's url** (a "next" link's `?page=2`, say), scrape that url directly instead of clicking to it. it loads once, not twice, so it's faster and more reliable; it can come from the cache, and it may not need a browser, so it can cost fewer credits.
 - **runs in a browser, never cached.** billed as a browser scrape; the actions add no credits.
-- **retries run the actions again**, from the start. use actions to read pages, never to place orders or sign up.
-- **where you can send it:** `actions` works over the api directly and on the hosted mcp server. the sdks, the cli and the local mcp server don't have it yet; they keep the old name, `extract.screenshot.actions_before` (waits and scrolls), until their next update. the old name works until it is removed on 2027-02-01. never send both in one request (a `400`).
+- **retries run the actions again**, from the start, so a form can be sent twice. never use actions for anything that must happen only once, such as an order.
+- **where you can send it:** every action works over the api directly. the mcp servers (hosted, and local from `@crawlbrulee/mcp` 2.0.0) take the actions that read a page, `wait`, `scroll`, `wait_for`, `hover` and `click`; to fill in a form, call the api. the sdks and the cli don't have `actions` yet; they keep the old name, `extract.screenshot.actions_before` (waits and scrolls), until their next update. the old name works until it is removed on 2027-02-01. never send both in one request (a `400`).
 
 the full rules are in the docs: [actions](https://crawlbrulee.com/docs/scrape/actions).
 
@@ -271,7 +291,7 @@ fields you didn't request are simply absent.
   "pdf": { "url": "…", "bytes": 184320 },  // only if you asked for a pdf
   "metadata": { "title": "…", "description": "…", "og_title": "…", "favicon_url": "…" },
   "elements": { "heading": "Books", "books": [ /* … */ ] },  // only if you asked for elements
-  "actions": [{ "type": "click", "status": "ran" }],        // only if you sent actions
+  "actions": [{ "type": "click", "status": "ok" }],        // only if you sent actions
   "unsupported_fields": [],
   "warnings": [],
   "response_meta": {
@@ -329,7 +349,7 @@ two more codes are about your request, not the page:
 | code | what it means |
 | --- | --- |
 | `custom_user_agent` | the request set its own `User-Agent` header; this can lower the success rate. see [headers and cookies](#headers-and-cookies) |
-| `actions_incomplete` | an action failed or never ran; the `actions` report says which, and the page is the one the actions left. see [actions](#actions-click-scroll-and-wait-first) |
+| `actions_incomplete` | an action failed or never ran; the `actions` report says which, and the page is the one the actions left. see [actions](#actions-click-scroll-wait-and-fill-in-forms-first) |
 
 new codes can be added over time, so treat a code you don't know as a note, not a failure.
 
@@ -344,7 +364,7 @@ if the status is fine but the content is thin, two levers, in this order:
 1. **`require_js: true`** — use it when parts of the page render client-side and the default scrape missed them.
 2. **`proxy: "advanced"`** — use the enhanced proxy tier for a higher retrieval success rate.
 
-if the content shows only after a click or a scroll (a "load more" button, a tab, lazy images), send [`actions`](#actions-click-scroll-and-wait-first).
+if the content shows only after a click, a scroll or a search (a "load more" button, a tab, lazy images, a search box), send [`actions`](#actions-click-scroll-wait-and-fill-in-forms-first).
 
 an `antibot_blocked` error means the target's bot protection blocked the request; don't retry it automatically. a `too_many_redirects` error (422) means the target redirected the request in a loop; same rule. a `page_too_large` error (422) means the page's html was too large to process — terminal, so don't retry it; scrape a smaller page instead. a `target_unreachable` error (502) means we could not reach the site at all — no page came back and you are not billed; retry once after a pause, and if it keeps failing, check the url and whether the site is up. `require_js` adds latency; see <https://crawlbrulee.com/pricing> for how the proxy tier affects cost.
 

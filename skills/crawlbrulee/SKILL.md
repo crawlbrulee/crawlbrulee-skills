@@ -18,7 +18,7 @@ this skill gets you authenticated and pointed at the right interface. the deep d
 | capability | what you get | skill |
 | --- | --- | --- |
 | **scrape** | fetch one url → markdown / cleaned html / raw html / links / images / screenshot / pdf / metadata, or just the values you name by css selector (`elements`) | **crawlbrulee-scrape** |
-| **actions** | click, scroll, hover and wait on the page before it is read (`actions`): a "load more" button, a "next" link, a popup to close | **crawlbrulee-scrape** |
+| **actions** | click, scroll, hover, wait and fill in forms on the page before it is read (`actions`): a "load more" button, a "next" link, a popup to close, a search box | **crawlbrulee-scrape** |
 | **pdf** | the page saved as a pdf document (`extract.pdf`), with selectable text and working links, as a signed link | **crawlbrulee-scrape** |
 | **screenshots** | viewport or full-page captures, desktop or mobile, light or dark (`color_scheme`), tall pages sliced into tiles | **crawlbrulee-screenshots** |
 | **async scrape** | submit a scrape as a background job; poll it, or get a webhook when it's done | **crawlbrulee-scrape-async** |
@@ -32,7 +32,7 @@ don't reach for capabilities that aren't there — build them from the primitive
 - **no crawl endpoint.** to "crawl" a site, compose **map** (discover urls) → **scrape** (fetch each one). filter the url list yourself and cap how many pages you scrape.
 - **no web search.** crawlbrulee scrapes urls you already have; it does not find pages by query.
 - **no llm extraction.** you get markdown, html, metadata, and the values you name with css selectors (`extract.elements`). there's no "find the price on this page" prompt — when a value can't be reached with a selector, run your own extraction on the markdown.
-- **no browser session.** every scrape starts fresh, and nothing is kept between requests. `actions` can click, scroll, hover and wait on a page before it is read, and they run again if we retry a scrape, so never use them to place orders or sign up. you can also send your own `headers` and `cookies` with the scrape (see **crawlbrulee-scrape**).
+- **no browser session.** every scrape starts fresh, and nothing is kept between requests. `actions` can click, scroll, hover, wait and fill in forms on a page before it is read, and they run again if we retry a scrape, so never use them for anything that must happen only once, such as an order. you can also send your own `headers` and `cookies` with the scrape (see **crawlbrulee-scrape**).
 
 > **need one of these?** tell us. email **contact@crawlbrulee.com** with what you're trying to do and which of these would help — a crawl endpoint, web search, llm extraction, browser sessions, or something else. we value your feedback, and we read every request - what people ask for shapes what we build next.
 

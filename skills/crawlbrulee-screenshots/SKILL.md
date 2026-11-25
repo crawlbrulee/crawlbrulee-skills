@@ -65,9 +65,9 @@ nudge a page into its final state before we shoot it: the fix for lazy-loaded im
 }
 ```
 
-`actions` also waits for an element, hovers and clicks: up to 12 actions and 60 s for the whole list. a request with actions never uses the cache. the types, limits and the report are in **crawlbrulee-scrape** and the [actions docs](https://crawlbrulee.com/docs/scrape/actions).
+`actions` also waits for an element, hovers, clicks and fills in forms: up to 12 actions and 60 s for the whole list. a request with actions never uses the cache. the types, limits and the report are in **crawlbrulee-scrape** and the [actions docs](https://crawlbrulee.com/docs/scrape/actions).
 
-over the api directly or the hosted mcp server, send `actions`. the sdks, the cli and the local mcp server don't have it yet: there, keep using `extract.screenshot.actions_before` (waits and scrolls) until their next update. it works until it is removed on 2027-02-01. never send both in one request (a `400`).
+over the api directly or an mcp server (hosted, or local from `@crawlbrulee/mcp` 2.0.0), send `actions`. the sdks and the cli don't have it yet: there, keep using `extract.screenshot.actions_before` (waits and scrolls) until their next update. it works until it is removed on 2027-02-01. never send both in one request (a `400`).
 
 ## slicing tall pages (`actions_after`)
 
@@ -139,7 +139,7 @@ curl -X POST https://api.crawlbrulee.com/api/scrape \
 - **check `page_status_code` too.** a page the site served with an error status is still a page, so you get a screenshot of it — a `404` page shoots like any other. look at the result's `page_status_code` before you treat the image as the page you wanted. see **crawlbrulee-scrape**.
 - **very long pages get capped.** we stop at a maximum capture height and flag it with a `screenshot_truncated` entry in the response's `warnings` array. if you see that code, the image and its slices stop at the cap.
 - **screenshot settings are part of the cache key.** the same url at a different capture type, viewport, device mode or `color_scheme` is a different entry — changing any of them means a fresh fetch.
-- **lazy content missing?** add a scroll and a short wait (in `actions`, or `actions_before` in the sdks, the cli and the local mcp server), or set `require_js: true` when the content renders client-side.
+- **lazy content missing?** add a scroll and a short wait (in `actions`, or `actions_before` in the sdks and the cli), or set `require_js: true` when the content renders client-side.
 
 ## see also
 

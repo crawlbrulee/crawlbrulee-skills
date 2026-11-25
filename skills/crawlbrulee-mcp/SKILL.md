@@ -11,7 +11,7 @@ metadata:
 
 the hosted mcp server, `https://api.crawlbrulee.com/mcp`, gives mcp-aware agents crawlbrulee as native tools, so the agent can scrape and map without any glue code. nothing to install, and your user signs in through their browser instead of handling an api key. the crawlbrulee plugin connects to it.
 
-need your own `headers` and `cookies` on a scrape, a `webhook` on a background job, `extract.raw_html`, the screenshot's `viewport` and `actions_before`, or a `proxy` tier? the hosted server leaves those out (every hosted call uses `auto`). use the local server, `@crawlbrulee/mcp` (see **crawlbrulee-mcp-local**), the cli or an sdk.
+need your own `headers` and `cookies` on a scrape, a `webhook` on a background job, `extract.raw_html`, the screenshot's `viewport`, or a `proxy` tier? the hosted server leaves those out (every hosted call uses `auto`). use the local server, `@crawlbrulee/mcp` (see **crawlbrulee-mcp-local**), the cli or an sdk.
 
 this skill is the tool surface. for what the api actually does — extract formats, proxy tiers, caching, errors — read **crawlbrulee-api** and the capability skills.
 
@@ -78,7 +78,7 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 
 **check `page_status_code` before you use the content.** a page the site really served is a normal `scrape` result, not a tool error — a `404`, `410` or `503` page comes back with its content, and the site's status is in `page_status_code` at the top level. the markdown of a `404` page is the site's "not found" text; tell the user the page answered `404` instead of treating that text as the page. `5xx` pages are never billed, and neither are `403`, `407`, `408`, `429`, `444` or `451` pages — see **crawlbrulee-api**.
 
-**need to click or scroll first?** `scrape` and `scrape_async` take `actions`: a list of `wait`, `scroll`, `wait_for` (an element), `hover` and `click`, run in order before the page is read. up to 12, and 60 seconds for the whole list:
+**need to click or scroll first?** `scrape` and `scrape_async` take `actions`: a list of `wait`, `scroll`, `wait_for` (an element), `hover` and `click`, run in order before the page is read. up to 12, and 60 seconds for the waits and scroll durations of the whole list:
 
 ```jsonc
 {
@@ -90,7 +90,7 @@ only `url` is required. a bare call returns markdown + metadata — **cleaned ht
 }
 ```
 
-cleanup runs first, so ads, popups and cookie banners are already gone; a popup that opens later can block a click, so click its close button first with `"optional": true`. a failed action stops the list: the page still comes back, with the `actions_incomplete` warning, and the result's `actions` says what happened to each one. a click that loads a new page is followed, and the result is that page. a call with actions never uses the cache, and a retry runs the actions again, so never use them to place orders or sign up. see [actions](https://crawlbrulee.com/docs/scrape/actions).
+cleanup runs first, so ads, popups and cookie banners are already gone; a popup that opens later can block a click, so click its close button first with `"optional": true`. a failed action stops the list: the page still comes back, with the `actions_incomplete` warning, and the result's `actions` says what happened to each one: `ok`, `failed`, `skipped` (it failed, but it was `optional`) or `not_run`. a click that loads a new page is followed: the result is that page, and the rest of the list runs there. when you know the next page's url, such as `?page=2`, scrape it directly instead of clicking to it: it loads once, so it comes back faster, and it can come from the cache. a call with actions never uses the cache, and a long list on a slow page can take longer than your app waits for a tool reply, so use `scrape_async` for it. a retry runs the actions again from the start, so never use them for anything that must happen only once, such as an order. to fill in and send a form (type text into a field, pick an option in a dropdown), call the http api: this server does not offer those actions. see [actions](https://crawlbrulee.com/docs/scrape/actions).
 
 **need a few values, not the whole page?** name them by css selector in `extract.elements` and the result has just those, as json, under a top-level `elements`. far less for the agent to read than the markdown, and no extra credits:
 
